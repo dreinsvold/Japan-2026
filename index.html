@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E2A33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Japan 2026">
+<meta name="description" content="Private travel companion — Tokyo, Yokkaichi, Yunoyama, Kyoto & Hiroshima, October 2026">
+<title>Japan 2026 · Travel Companion</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230E2A33'/%3E%3Cg fill='none' stroke='%23C99A4A' stroke-width='3'%3E%3Ccircle cx='32' cy='32' r='17'/%3E%3C/g%3E%3Cpath d='M32 17 L37 32 L32 47 L27 32 Z' fill='%23C99A4A'/%3E%3C/svg%3E">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --ink:#23211C;            /* primary text */
+  --ink-soft:#5A5344;       /* secondary text */
+  --paper:#FAF6EE;          /* ticket-stock page */
+  --paper-2:#F2EBDC;        /* slightly deeper paper */
+  --card:#FFFDF8;           /* raised card */
+  --line:#E2D8C4;           /* hairline on paper */
+  --night:#0E2A33;          /* night-train chrome */
+  --night-2:#15333D;
+  --brass:#B8893E;          /* luggage hardware */
+  --brass-bright:#C99A4A;
+  --brass-tint:#F4E9D2;
+  /* per-leg accents */
+  --be:#C8941E;  --lu:#3E6B8C;  --fr:#A8423C;  --ch:#2F6B4F;  --transit:#7A6A52;
+  --accent:var(--brass);      /* live leg accent, set by JS */
+  --accent-tint:#F4E9D2;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(28,40,44,.06), 0 8px 24px rgba(28,40,44,.07);
+  --tap:44px;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,"Roboto Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans); color:var(--ink);
+  background:var(--paper);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overscroll-behavior-y:none;
+}
+/* subtle paper grain via layered gradients (no external asset) */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(201,154,74,.06), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,.012) 0 1px, transparent 1px 3px);
+}
+a{color:inherit}
+button{font-family:inherit}
+
+/* ============ TOP BAR ============ */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  background:linear-gradient(180deg,var(--night),var(--night-2));
+  color:#F3ECDD; padding:calc(env(safe-area-inset-top,0px) + 9px) 16px 9px;
+  display:flex; align-items:center; gap:12px;
+  border-bottom:1px solid rgba(201,154,74,.28);
+  box-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+.brand{display:flex;flex-direction:column;line-height:1;min-width:0}
+.brand .mono{font-family:var(--mono);font-size:10px;letter-spacing:.32em;color:var(--brass-bright);text-transform:uppercase}
+.brand .ttl{font-family:var(--serif);font-size:16px;letter-spacing:.01em;margin-top:3px;color:#FBF5E8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leg-pill{
+  margin-left:auto;display:flex;align-items:center;gap:7px;flex-shrink:0;
+  background:rgba(255,255,255,.08); border:1px solid var(--accent);
+  color:#F3ECDD;border-radius:999px;padding:5px 11px 5px 9px;
+  font-size:11px;font-weight:600;letter-spacing:.02em;
+}
+.leg-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent)}
+.leg-pill .flag{font-size:14px}
+
+/* ============ LAYOUT ============ */
+#app{max-width:680px;margin:0 auto;padding:16px 14px calc(96px + var(--safe-b))}
+.view{animation:fade .28s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--brass);font-weight:600}
+.h-section{font-family:var(--serif);font-size:21px;font-weight:600;margin:4px 0 0;letter-spacing:.01em}
+.sub{color:var(--ink-soft);font-size:13.5px;line-height:1.5}
+.section-head{margin:26px 4px 12px}
+.section-head:first-child{margin-top:6px}
+
+/* ============ CARD ============ */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card.pad{padding:16px}
+
+/* ============ DEPARTURE BOARD HERO ============ */
+.board{
+  position:relative;overflow:hidden;border-radius:18px;color:#F4ECDC;
+  background:linear-gradient(160deg,var(--night) 0%, #0b232b 55%, #0a1f26 100%);
+  border:1px solid rgba(201,154,74,.35);
+  box-shadow:var(--shadow);
+}
+.board::after{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--accent)}
+.board .inner{padding:18px 18px 20px}
+.board .status{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-bright)}
+.board .status .blink{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 2.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:.35}50%{opacity:1}}
+.board .bigdate{font-family:var(--serif);font-size:13px;color:#cdbf9f;margin-top:12px;letter-spacing:.02em}
+.board h1{font-family:var(--serif);font-size:27px;line-height:1.12;margin:5px 0 0;font-weight:600;color:#FCF6EA}
+.board .road{color:#d8cdb2;font-size:14px;margin-top:7px;line-height:1.45}
+.board .legrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:#ece2cc}
+.tag .ic{opacity:.9}
+.board .quick{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:16px;background:rgba(201,154,74,.22);border-radius:12px;overflow:hidden}
+.board .quick div{background:rgba(8,24,29,.6);padding:11px 12px}
+.board .quick .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-bright)}
+.board .quick .v{font-size:12.5px;color:#e9dfc8;margin-top:3px;line-height:1.35}
+
+.flipgo{display:flex;gap:9px;margin-top:14px}
+.btn{
+  -webkit-appearance:none;appearance:none;border:0;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:var(--tap);padding:0 16px;border-radius:11px;font-size:14px;font-weight:600;
+  letter-spacing:.01em;transition:transform .08s ease, filter .15s ease;
+}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{background:rgba(255,255,255,.07);color:#f0e7d2;border:1px solid rgba(255,255,255,.2)}
+.btn.block{width:100%}
+
+/* ============ CALLOUTS ============ */
+.callout{display:flex;gap:11px;padding:13px 14px;border-radius:12px;background:var(--brass-tint);border:1px solid color-mix(in srgb,var(--accent) 34%,var(--line));margin-top:10px}
+.callout .bar{width:3px;border-radius:3px;background:var(--accent);flex:0 0 3px}
+.callout .ttl{font-weight:700;font-size:13px;color:#4a3a1c}
+.callout .bd{font-size:13px;color:#5b4d33;line-height:1.5;margin-top:3px}
+
+/* ============ TIMETABLE ============ */
+.timetable{position:relative;margin-top:6px;padding-left:4px}
+.tt-row{display:grid;grid-template-columns:62px 1fr;gap:12px;position:relative;padding:9px 0}
+.tt-row:not(:last-child)::before{content:"";position:absolute;left:73px;top:24px;bottom:-9px;width:2px;background:linear-gradient(var(--line),var(--line))}
+.tt-time{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;text-align:right;padding-top:1px;letter-spacing:.01em}
+.tt-plan{position:relative;font-size:14px;line-height:1.4;color:var(--ink);padding-left:18px}
+.tt-plan::before{content:"";position:absolute;left:-1px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--card);border:2.5px solid var(--accent)}
+
+/* ============ STOPS ============ */
+.stop{display:flex;gap:13px;padding:14px;border-bottom:1px solid var(--line)}
+.stop:last-child{border-bottom:0}
+.stop .num{flex:0 0 28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12.5px;font-weight:700;margin-top:1px}
+.stop .body{min-width:0;flex:1}
+.stop .name{font-family:var(--serif);font-size:16px;font-weight:600;line-height:1.2}
+.stop .desc{font-size:13px;color:var(--ink-soft);line-height:1.5;margin-top:5px}
+.stop .addr{display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:var(--accent);font-weight:600;text-decoration:none}
+.maplink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:600;font-size:12.5px;color:var(--accent);
+  border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-radius:9px;padding:7px 11px;background:color-mix(in srgb,var(--accent) 7%,var(--card));min-height:36px}
+.maplink:active{filter:brightness(.96)}
+
+/* ============ GENERIC ROWS / GRID ============ */
+.eat-row{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.eat-row:last-child{border-bottom:0}
+.eat-cat{font-size:13px;white-space:nowrap}
+.eat-rec{font-size:14px;font-weight:600;line-height:1.3}
+.eat-note{grid-column:2;font-size:12.5px;color:var(--ink-soft);margin-top:-4px;line-height:1.4}
+.foodlist{display:flex;flex-direction:column;gap:11px}
+.food .fn{font-family:var(--serif);font-size:15px;font-weight:600}
+.food .fd{font-size:13px;color:var(--ink-soft);line-height:1.5;margin-top:2px}
+.gk{display:grid;gap:11px}
+.gk .gk-k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.gk .gk-v{font-size:13.5px;line-height:1.5;margin-top:3px}
+
+/* ============ DAYS LIST ============ */
+.daycard{display:flex;align-items:stretch;gap:0;text-decoration:none;color:inherit;margin-bottom:10px;overflow:hidden}
+.daycard .stripe{flex:0 0 6px;background:var(--accent)}
+.daycard .dc-in{padding:13px 14px;flex:1;min-width:0}
+.daycard .dc-top{display:flex;align-items:center;gap:8px}
+.daycard .dnum{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;color:#fff;background:var(--accent);padding:2px 7px;border-radius:6px}
+.daycard .ddate{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.04em}
+.daycard .dhead{font-family:var(--serif);font-size:17px;font-weight:600;margin-top:6px;line-height:1.2}
+.daycard .dsub{font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.4}
+.daycard .chev{align-self:center;color:var(--accent);font-size:20px;padding-right:12px}
+.today-badge{font-family:var(--mono);font-size:9px;letter-spacing:.14em;background:#1d4a2e;color:#cfe6d6;padding:2px 6px;border-radius:5px;text-transform:uppercase}
+
+/* ============ DAY DETAIL ============ */
+.detail-bar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 48px);z-index:30;display:flex;align-items:center;gap:10px;margin:-16px -14px 10px;padding:10px 14px;background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:saturate(1.4) blur(8px);-webkit-backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line)}
+.backbtn{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;min-height:36px}
+.detail-bar .dstep{margin-left:auto;display:flex;gap:6px}
+.detail-bar .dstep button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--accent);font-size:16px;cursor:pointer}
+.detail-bar .dstep button:disabled{opacity:.35}
+
+/* ============ NOTES ============ */
+textarea.notes{width:100%;min-height:88px;border:1px dashed color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:12px;background:repeating-linear-gradient(var(--card),var(--card) 27px,var(--line) 27px,var(--line) 28px);padding:8px 12px;font-family:var(--sans);font-size:14px;line-height:28px;color:var(--ink);resize:vertical}
+textarea.notes:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+/* ============ CHECKLIST ============ */
+.progress{height:7px;border-radius:6px;background:var(--paper-2);overflow:hidden;border:1px solid var(--line)}
+.progress > i{display:block;height:100%;background:var(--accent);transition:width .3s ease}
+.check{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;min-height:var(--tap)}
+.check:last-child{border-bottom:0}
+.check .box{flex:0 0 22px;height:22px;border-radius:6px;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;transition:background .12s}
+.check.on .box{background:var(--accent)}
+.check.on .lbl{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--accent) 60%,transparent)}
+.check .lbl{font-size:14.5px;line-height:1.35}
+
+/* ============ ACCORDION (cities/info) ============ */
+.acc{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
+.acc > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:11px;padding:15px 15px;min-height:var(--tap)}
+.acc > summary::-webkit-details-marker{display:none}
+.acc .city-flag{font-size:20px}
+.acc .city-name{font-family:var(--serif);font-size:17px;font-weight:600}
+.acc .city-meta{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+.acc .mk{margin-left:auto;color:var(--accent);transition:transform .2s;font-size:14px}
+.acc[open] .mk{transform:rotate(90deg)}
+.acc .acc-body{padding:2px 15px 16px}
+.linkchips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+.chip{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:12.5px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:999px;padding:7px 12px;min-height:36px}
+.chip.flat{color:var(--ink-soft);background:var(--paper-2);border-color:var(--line)}
+.minihead{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin:12px 0 7px}
+.linkrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+.linkrow:last-child{border-bottom:0}
+.linkrow .lr-name{font-size:14px;font-weight:600;line-height:1.25}
+.linkrow .lr-note{font-size:12px;color:var(--ink-soft)}
+.linkrow .lr-go{margin-left:auto;color:var(--accent);font-size:12px;font-weight:700;white-space:nowrap}
+
+/* ============ INFO TABLES ============ */
+.kv{display:grid;grid-template-columns:120px 1fr;gap:8px 12px;font-size:13.5px;line-height:1.5}
+.kv .k{font-weight:600;color:var(--ink)}
+.dtable{width:100%;border-collapse:collapse;font-size:13px}
+.dtable th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--brass);text-align:left;padding:7px 8px;border-bottom:2px solid var(--line)}
+.dtable td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.4}
+.tel{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+.emerg-call{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid var(--line)}
+.emerg-call:last-child{border-bottom:0}
+.emerg-call .ec-c{font-family:var(--serif);font-size:15px;font-weight:600}
+.emerg-call .ec-n{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+.callbtn{display:inline-flex;align-items:center;gap:7px;background:#b3261e;color:#fff;border-radius:10px;padding:9px 14px;font-weight:700;font-size:14px;text-decoration:none;min-height:40px}
+
+/* ============ BOTTOM TABBAR ============ */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:linear-gradient(180deg,var(--night-2),var(--night));
+  border-top:1px solid rgba(201,154,74,.3);
+  padding:7px 6px calc(7px + var(--safe-b));
+  display:grid;grid-template-columns:repeat(5,1fr);
+}
+.tab{background:none;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;color:#9fb0b3;border-radius:10px}
+.tab .ti{width:23px;height:23px;display:block}
+.tab .tl{font-size:10px;font-weight:600;letter-spacing:.02em}
+.tab.active{color:var(--brass-bright)}
+.tab.active .ti{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--brass-bright) 50%,transparent))}
+.tab svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============ MISC ============ */
+.note-soft{font-size:12px;color:var(--ink-soft);line-height:1.5}
+.divider{height:1px;background:var(--line);margin:14px 0}
+.flagrow{font-size:15px;letter-spacing:.18em}
+.pricetag{font-family:var(--mono);font-size:12px;color:var(--brass);font-weight:700}
+.hidden{display:none!important}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (min-width:560px){ .board h1{font-size:30px} }
+.seentog{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--paper-2);color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.seentog .sbox{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line);font-size:10px;line-height:1;color:transparent}
+.seentog.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.seentog.on .sbox{border-color:#fff;color:var(--accent);background:#fff}
+.stop.seen{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.leg{display:flex;gap:13px;padding:12px 14px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 4%,transparent)}
+.leg-ic{flex:0 0 28px;height:28px;border-radius:50%;background:var(--paper-2);border:1px dashed color-mix(in srgb,var(--accent) 55%,var(--line));display:flex;align-items:center;justify-content:center;font-size:13px;margin-top:1px}
+.leg-name{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.leg-desc{font-size:13px;line-height:1.55;color:var(--ink);margin-top:4px}
+.seg{display:flex;gap:6px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px}
+.seg{flex-wrap:wrap}
+.seg button{flex:1 1 22%;min-width:70px;font-family:inherit;font-size:12.5px;font-weight:600;padding:9px 5px;border:none;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.seg button.on{background:var(--accent);color:#fff}
+.tier-head{font-family:var(--mono);font-size:12px;letter-spacing:.03em;color:var(--accent);font-weight:700;margin:16px 0 6px}
+.check .mk{margin-left:auto;transition:transform .18s}
+.check.open .mk{transform:rotate(90deg)}
+.buydetails{display:none;padding:0 14px 12px 50px;font-size:13px;color:var(--muted);line-height:1.5}
+.check.open + .buydetails{display:block}
+.buydetails .pricetag{font-size:12px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mono">JAPAN 2026</span>
+    <span class="ttl">Tokyo · Kansai · Hiroshima</span>
+  </div>
+  <div class="leg-pill" id="legPill"><span class="dot"></span><span class="flag" id="legFlag">✈</span><span id="legName">In transit</span></div>
+</header>
+
+<main id="app"><!-- views render here --></main>
+
+<nav class="tabbar" id="tabbar"></nav>
+
+<script>
+/* ====================== DATA ====================== */
+const DATA = {"meta": {"title": "Japan 2026", "subtitle": "Tokyo → Yokkaichi → Yunoyama → Kyoto → Hiroshima & Miyajima → Tokyo", "dates": "October 14–27, 2026", "tripStart": "2026-10-14", "tripEnd": "2026-10-27"}, "glance": {"route": [{"nights": "Oct 14–16 (2)", "city": "Tokyo — Ginza", "hotel": "Solaria Nishitetsu Hotel Ginza", "country": "Japan 🇯🇵"}, {"nights": "Oct 16–17 (1)", "city": "Yokkaichi", "hotel": "Miyako Hotel Yokkaichi", "country": "Japan 🇯🇵"}, {"nights": "Oct 17–19 (2)", "city": "Yokkaichi", "hotel": "Friends & family", "country": "Japan 🇯🇵"}, {"nights": "Oct 19–20 (1)", "city": "Yokkaichi", "hotel": "Miyako Hotel Yokkaichi", "country": "Japan 🇯🇵"}, {"nights": "Oct 20–21 (1)", "city": "Yunoyama", "hotel": "Shikanoyu Hotel (ryokan)", "country": "Japan 🇯🇵"}, {"nights": "Oct 21–24 (3)", "city": "Kyoto", "hotel": "Cross Hotel Kyoto", "country": "Japan 🇯🇵"}, {"nights": "Oct 24–26 (2)", "city": "Hiroshima", "hotel": "Hotel Intergate Hiroshima", "country": "Japan 🇯🇵"}, {"nights": "Oct 26–27 (1)", "city": "Tokyo — Shinagawa", "hotel": "Shinagawa Prince Hotel — Main Tower", "country": "Japan 🇯🇵"}], "flights": [{"k": "✈️  Arrival", "v": "Wed Oct 14 — lands Tokyo Haneda (HND) ~2:00 PM. Outbound origin/flight number not yet in this pack — add once booked."}, {"k": "🚗  Airport transfer", "v": "HND → Ginza hotel by train or airport limousine bus (not pre-booked — day-of decision)."}, {"k": "✈️  Return", "v": "Tue Oct 27 — departs Tokyo Haneda (HND) ~8:00 PM. Leave Shinagawa ~4:15 PM to allow time for check-in."}], "key": ["Thu Oct 15 — Sushi Fujioka, 6:00 PM, 2 guests — BOOKED.", "Mon Oct 19 — Send large suitcase: Miyako Hotel Yokkaichi → Cross Hotel Kyoto (requested delivery Oct 20).", "Tue Oct 20 — Shikanoyu Hotel check-in target ~3:00 PM (window 15:00–19:00).", "Fri Oct 23 — Send large suitcase: Cross Hotel Kyoto → Shinagawa Prince Main Tower (requested delivery Oct 26); Gion Fukushi dinner, 6:00 PM — BOOKED.", "Sat Oct 24 — Hiroshima Peace Memorial Museum, timed entry 5:30 PM — BOOKED.", "Sun Oct 25 — Miyajima — tide-aware schedule, target arrival ~8:15–8:30 AM.", "Mon Oct 26 — Large suitcase reunion at Shinagawa Prince Hotel — Main Tower front desk.", "Tue Oct 27 — Leave Shinagawa ~4:15 PM → HND for the 8:00 PM flight."]}, "hotels": [{"name": "Solaria Nishitetsu Hotel Ginza", "address": "Ginza, Chuo-ku, Tokyo", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Solaria%20Nishitetsu%20Hotel%20Ginza%2C%20Tokyo", "phone": "", "notes": "BOOKED — 2 nights, Oct 14–16. Central Ginza, walkable to Tsukiji, Yurakucho and the Ginza Line."}, {"name": "Miyako Hotel Yokkaichi", "address": "Yokkaichi, Mie Prefecture", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Miyako%20Hotel%20Yokkaichi", "phone": "", "notes": "BOOKED — two separate stays, Oct 16–17 and Oct 19–20 (friends/family in between)."}, {"name": "Shikanoyu Hotel", "address": "Yunoyama Onsen, Komono, Mie Prefecture", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Shikanoyu%20Hotel%20Yunoyama%20Onsen", "phone": "", "notes": "BOOKED, 1 night — Oct 20–21. Check-in window 15:00–19:00 (target ~15:00), checkout by 10:00. [Early Bird 30] Ise-Mizusawa Beef Teppanyaki / Standard Kaiseki plan; sweets café access."}, {"name": "Cross Hotel Kyoto", "address": "Kawaramachi, Kyoto", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Cross%20Hotel%20Kyoto", "phone": "", "notes": "BOOKED, 3 nights — Oct 21–24. Non-smoking Superior Twin, rate plan ADVANCE60, 2 adults. Central — steps from Nishiki Market, Kamo River and Pontocho."}, {"name": "Hotel Intergate Hiroshima", "address": "Hiroshima", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Hotel%20Intergate%20Hiroshima", "phone": "", "notes": "BOOKED, 2 nights — Oct 24–26. Walkable to the Peace Memorial Park and Hondori."}, {"name": "Shinagawa Prince Hotel — Main Tower", "address": "4-10-30 Takanawa, Minato-ku, Tokyo 108-8611", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Shinagawa%20Prince%20Hotel%20Main%20Tower%2C%204-10-30%20Takanawa%2C%20Minato-ku%2C%20Tokyo", "phone": "", "notes": "BOOKED, 1 night — Oct 26–27. Twin Room, non-smoking, 28th–34th floor, Main Tower. This is where the forwarded suitcase arrives — front desk, Main Tower."}], "drivers": [], "days": [{"n": 1, "weekday": "Wednesday", "date": "October 14", "iso": "2026-10-14", "short": "Wed, Oct 14", "headline": "Arrival — Tokyo (Ginza)", "subtitle": "Land HND ~2:00 PM · settle into Ginza · easy first evening", "overview": "A long flight lands you into Tokyo early afternoon — clear immigration, ride into Ginza, drop bags, and keep the rest of the day loose. A short evening stroll around Ginza is plenty; save the big first day for tomorrow.", "weather": "Mid-October Tokyo — mild, ~18–23°C / 64–73°F, low rain chance", "walking": "~2–3 km, flat city streets", "transport": "HND → Ginza by train (Keikyu + subway) or airport limousine bus", "schedule": [{"time": "14:00", "plan": "Arrival flight lands at Haneda (HND)"}, {"time": "14:45", "plan": "Immigration, baggage, SIM/IC card if needed"}, {"time": "15:30", "plan": "Train or limousine bus HND → Ginza"}, {"time": "16:30", "plan": "Hotel check-in — Solaria Nishitetsu Hotel Ginza"}, {"time": "18:00", "plan": "Easy Ginza evening stroll"}, {"time": "19:00", "plan": "Dinner near the hotel, early night"}], "tour": {"intro": "A tight loop from the hotel — nothing more than a jet-lagged wander. Start at Ginza Crossing, swing past Ginza Six, and loop back toward the hotel past Kabuki-za.", "stops": [{"transit": true, "name": "HND → Ginza", "url": "https://www.google.com/maps/search/?api=1&query=Haneda%20Airport%20International%20Terminal", "desc": "Keikyu Line + Toei Asakusa Line to Higashi-Ginza (~40–50 min), or the Airport Limousine Bus direct to a Ginza hotel (~45–60 min depending on traffic)."}, {"name": "Ginza Crossing", "url": "https://www.google.com/maps/search/?api=1&query=Ginza%204-chome%20Crossing%2C%20Tokyo", "address": "Ginza 4-chome, Chuo-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Ginza%204-chome%2C%20Chuo-ku%2C%20Tokyo", "desc": "The neon heart of Ginza — the intersection of Chuo-dori and Harumi-dori, ringed by flagship department stores. A good first orientation point after a long flight."}, {"name": "Ginza Six", "url": "https://www.google.com/maps/search/?api=1&query=Ginza%20Six%2C%20Tokyo", "address": "6-10-1 Ginza, Chuo-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=6-10-1%20Ginza%2C%20Chuo-ku%2C%20Tokyo", "desc": "A striking 2017 retail complex with a rooftop garden (free, open-air, good for a first-evening view) and a sweeping atrium — an easy, air-conditioned way to stretch your legs."}, {"name": "Kabuki-za Theatre (exterior)", "url": "https://www.google.com/maps/search/?api=1&query=Kabukiza%20Theatre%2C%20Ginza%2C%20Tokyo", "address": "4-12-15 Ginza, Chuo-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=4-12-15%20Ginza%2C%20Chuo-ku%2C%20Tokyo", "desc": "Tokyo's principal Kabuki theatre — an ornate, castle-like facade even if you're not catching a show. A few minutes' walk back toward the hotel."}]}, "callouts": [{"title": "🛬 Keep it light today", "body": "You'll be running on plane sleep. This evening is intentionally unscheduled — a short walk and an early dinner beats trying to see too much."}], "eat": [{"cat": "🍽 Dinner", "rec": "Casual, near the hotel", "notes": "No reservation needed — a konbini snack or a simple izakaya both work well after a long travel day."}], "foods": [], "good": {"photo": "Ginza Six rooftop garden at dusk", "coffee": "Any of the Ginza department-store cafes", "restrooms": "Ginza Six and any department store", "rainy": "Ginza's arcades and department stores are entirely indoors", "packing": "Keep your IC card (Suica/Pasmo), phone charger and this guide in your day bag from the airport onward."}}, {"n": 2, "weekday": "Thursday", "date": "October 15", "iso": "2026-10-15", "short": "Thu, Oct 15", "headline": "Tsukiji, Azabudai & Tokyo Tower", "subtitle": "Morning market · Azabudai Hills · Sushi Fujioka 6:00 PM", "overview": "Tsukiji Outer Market first thing while it's freshest and least crowded, then south to the Azabudai Hills / Tokyo Tower area for the afternoon — with teamLab Borderless as a genuinely optional add-on. The day ends at Sushi Fujioka, a booked dinner in Nishi-Azabu.", "weather": "Mid-October Tokyo — mild, ~18–23°C / 64–73°F", "walking": "~6–7 km including the market", "transport": "Subway (Hibiya/Oedo lines) between Ginza, Tsukiji and Azabudai; taxi or short walk to Nishi-Azabu for dinner", "schedule": [{"time": "8:30", "plan": "Walk to Tsukiji Outer Market"}, {"time": "9:00", "plan": "Tsukiji Outer Market — breakfast/snacks and browsing"}, {"time": "11:00", "plan": "Subway to Azabudai / Tokyo Tower area"}, {"time": "11:45", "plan": "Tokyo Tower"}, {"time": "13:00", "plan": "Lunch in Azabudai Hills"}, {"time": "14:00", "plan": "Azabudai Hills Garden Plaza"}, {"time": "15:00", "plan": "Optional: teamLab Borderless"}, {"time": "18:00", "plan": "Sushi Fujioka — dinner (booked, 2 guests)"}], "tour": {"intro": "Tsukiji first while the market is at its best, then south toward Azabudai Hills and Tokyo Tower — the same neighborhood as tonight's dinner, so the day naturally ends near the restaurant rather than looping back to Ginza.", "stops": [{"name": "Tsukiji Outer Market", "url": "https://www.google.com/maps/search/?api=1&query=Tsukiji%20Outer%20Market%2C%20Tokyo", "address": "4-chome Tsukiji, Chuo-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=4-chome%20Tsukiji%2C%20Chuo-ku%2C%20Tokyo", "desc": "The old outer market's food stalls and shops survived the 2018 wholesale-market move to Toyosu — still the best place in Tokyo for a grazing breakfast: grilled skewers, tamagoyaki, uni, fresh sashimi. Go early; stalls sell out and crowds build by mid-morning."}, {"transit": true, "name": "Tsukiji → Azabudai Hills", "url": "https://www.google.com/maps/search/?api=1&query=Kamiyacho%20Station%2C%20Tokyo", "desc": "Hibiya Line to Kamiyacho or Roppongi-itchome (~15–20 min), then a short walk into Azabudai Hills / Tokyo Tower."}, {"name": "Tokyo Tower", "url": "https://www.google.com/maps/search/?api=1&query=Tokyo%20Tower", "address": "4-2-8 Shibakoen, Minato-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=4-2-8%20Shibakoen%2C%20Minato-ku%2C%20Tokyo", "desc": "The 1958 red-and-white broadcast tower that's still Tokyo's most photogenic skyline landmark, especially framed from Azabudai Hills or Zojo-ji Temple just below it."}, {"name": "Azabudai Hills Garden Plaza", "url": "https://www.google.com/maps/search/?api=1&query=Azabudai%20Hills%2C%20Tokyo", "address": "1-chome Azabudai, Minato-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1-chome%20Azabudai%2C%20Minato-ku%2C%20Tokyo", "desc": "Tokyo's newest large-scale district (opened 2023) — a low-rise 'garden plaza' of shops, restaurants and green space beneath Japan's tallest building, Mori JP Tower."}, {"name": "teamLab Borderless (optional)", "url": "https://www.google.com/maps/search/?api=1&query=teamLab%20Borderless%20Azabudai%20Hills%2C%20Tokyo", "address": "Azabudai Hills, Minato-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Azabudai%20Hills%2C%20Minato-ku%2C%20Tokyo", "desc": "The reborn teamLab Borderless reopened at Azabudai Hills in 2024 after its original Odaiba venue closed. Immersive, mirrored digital-art rooms — worth 1.5–2 hours if it's open and available, but skip without regret if you'd rather have more Tokyo time; book timed tickets online in advance if you want it."}]}, "callouts": [{"title": "🍣 Sushi Fujioka is the anchor tonight", "body": "6:00 PM, 2 guests, booked in Nishi-Azabu — a short taxi or walk from Azabudai Hills. Don't let the afternoon run long; leave real buffer before 6:00."}, {"title": "🎟️ teamLab is optional", "body": "Don't structure the day around it. If tickets aren't available or you'd rather keep exploring Tokyo neighborhoods or resting, skip it without a second thought."}], "eat": [{"cat": "🍽 Breakfast", "rec": "Tsukiji Outer Market stalls", "notes": "Graze rather than sit down — tamagoyaki, skewers, fresh seafood by the piece."}, {"cat": "🍽 Lunch", "rec": "Azabudai Hills Garden Plaza", "notes": "Wide range of casual options in the plaza's low-rise restaurant row."}, {"cat": "🍣 Dinner", "rec": "Sushi Fujioka", "notes": "6:00 PM, 2 guests — BOOKED. Nishi-Azabu."}], "foods": [{"name": "Tamagoyaki", "desc": "Sweet-savory rolled omelet — a Tsukiji specialty sold warm off skewers."}, {"name": "Uni & fresh sashimi", "desc": "Sold by the piece or small cup at Tsukiji's seafood stalls — as fresh as Tokyo gets outside a sushi counter."}], "good": {"photo": "Tokyo Tower framed from Azabudai Hills' Garden Plaza", "coffee": "Azabudai Hills has several third-wave cafes", "restrooms": "Azabudai Hills Garden Plaza; Tsukiji Outer Market has public restrooms near the entrance", "rainy": "Azabudai Hills' covered plaza and teamLab (if visiting) both work well indoors", "packing": "Bring an appetite to Tsukiji and skip a big breakfast at the hotel."}}, {"n": 3, "weekday": "Friday", "date": "October 16", "iso": "2026-10-16", "short": "Fri, Oct 16", "headline": "Tokyo → Yokkaichi", "subtitle": "Easy Tokyo morning, then Shinkansen + Kintetsu to Yokkaichi", "overview": "A relaxed final Tokyo morning before the long-distance leg: Nozomi Shinkansen to Nagoya, then a Kintetsu Limited Express on to Yokkaichi, targeting arrival around 5:00–5:30 PM.", "weather": "Mid-October — mild, ~17–22°C / 63–72°F", "walking": "~2–3 km plus stations", "transport": "Tokyo → Nagoya: Nozomi Shinkansen, Ordinary Reserved. Nagoya → Yokkaichi: Kintetsu Limited Express preferred. Book by 9/16.", "schedule": [{"time": "Morning", "plan": "Easy morning in Ginza — pack, check out, optional Hamarikyu Gardens"}, {"time": "11:00", "plan": "Head to Tokyo Station"}, {"time": "~12:00", "plan": "Nozomi Shinkansen, Tokyo → Nagoya (Ordinary Reserved, ~1h40)"}, {"time": "~14:00", "plan": "Transfer to Kintetsu Limited Express, Nagoya → Yokkaichi"}, {"time": "~17:00–17:30", "plan": "Arrive Yokkaichi — Miyako Hotel Yokkaichi check-in"}, {"time": "Evening", "plan": "Casual dinner in Yokkaichi"}], "tour": {"intro": "A short optional garden stroll near the hotel before checkout, then three transit legs on to Yokkaichi — this is a travel day, not a walking-tour day.", "stops": [{"name": "Hamarikyu Gardens (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Hamarikyu%20Gardens%2C%20Tokyo", "address": "1-1 Hamarikyucho, Chuo-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1-1%20Hamarikyucho%2C%20Chuo-ku%2C%20Tokyo", "desc": "A tidal Edo-period garden a short walk from Ginza, with a seawater pond, a 300-year-old pine and a teahouse on an island. A calm, uncrowded way to spend a spare morning hour before checkout."}, {"transit": true, "name": "Ginza → Tokyo Station", "url": "https://www.google.com/maps/search/?api=1&query=Tokyo%20Station", "desc": "Subway or a ~20-minute walk."}, {"transit": true, "name": "Tokyo → Nagoya", "url": "https://www.google.com/maps/search/?api=1&query=Nagoya%20Station", "desc": "Tokaido Shinkansen, Nozomi, Ordinary Reserved — about 1 hr 40 min."}, {"transit": true, "name": "Nagoya → Yokkaichi", "url": "https://www.google.com/maps/search/?api=1&query=Kintetsu%20Yokkaichi%20Station", "desc": "Kintetsu Limited Express preferred — about 35–45 min, direct into central Yokkaichi."}]}, "callouts": [{"title": "🎫 Book this leg by 9/16", "body": "Rail booking target for today's trains is September 16 — exact departures stay open until the October timetable and seat maps are available."}, {"title": "🕔 Target Yokkaichi ~5:00–5:30 PM", "body": "No fixed itinerary tonight beyond arrival and settling in."}], "eat": [{"cat": "🍽 Dinner", "rec": "Casual, near Miyako Hotel Yokkaichi", "notes": "No reservation — keep it simple after a travel day."}], "foods": [], "good": {"photo": "—", "coffee": "Tokyo or Nagoya Station has plenty of options for the transfer", "restrooms": "All three stations", "rainy": "Entirely indoors/on trains today", "packing": "Keep your Shinkansen and Kintetsu tickets, plus a snack for the journey, in your day bag."}}, {"n": 4, "weekday": "Saturday", "date": "October 17", "iso": "2026-10-17", "short": "Sat, Oct 17", "headline": "Yokkaichi — Friends & Family", "subtitle": "Tentative: a Nagoya outing, or a local day with friends/family", "overview": "No fixed itinerary today — friends and family plans take priority. A Nagoya day trip is a genuine option if the day opens up that way, but this page intentionally doesn't plan around it.", "weather": "Mid-October — mild, ~17–22°C / 63–72°F", "walking": "Depends on the day", "transport": "Depends on the day", "schedule": [{"time": "Day", "plan": "Friends/family plans, or a possible Nagoya outing — no fixed schedule"}], "tour": null, "callouts": [{"title": "👪 Friends/family come first", "body": "This day is intentionally unplanned. If a Nagoya outing happens, Nagoya Castle and the Osu shopping arcade are the easiest wins by train (Kintetsu Nagoya Line, ~35–45 min from Yokkaichi) — but there's no obligation to go."}], "eat": [], "foods": [], "good": {"photo": "—", "coffee": "—", "restrooms": "—", "rainy": "—", "packing": "—"}}, {"n": 5, "weekday": "Sunday", "date": "October 18", "iso": "2026-10-18", "short": "Sun, Oct 18", "headline": "Yokkaichi — Friends & Family", "subtitle": "Tentative: an Ise outing, or a local day with friends/family", "overview": "Another intentionally open day. An Ise day is worth considering, especially if friends are driving, but friends/family plans take priority over any fixed sightseeing.", "weather": "Mid-October — mild, ~17–22°C / 63–72°F", "walking": "Depends on the day", "transport": "Depends on the day", "schedule": [{"time": "Day", "plan": "Friends/family plans, or a possible Ise outing — no fixed schedule"}], "tour": null, "callouts": [{"title": "⛩️ Ise, if it happens", "body": "Ise Grand Shrine (Ise Jingu) is Japan's most sacred Shinto site, about an hour south of Yokkaichi. Easiest with a driver; by train it's Kintetsu to Ise-shi or Isuzugawa. Only worth chasing if it fits naturally — friends/family plans take priority."}], "eat": [], "foods": [], "good": {"photo": "—", "coffee": "—", "restrooms": "—", "rainy": "—", "packing": "—"}}, {"n": 6, "weekday": "Monday", "date": "October 19", "iso": "2026-10-19", "short": "Mon, Oct 19", "headline": "Yokkaichi — Reset Day & Luggage Forwarding", "subtitle": "Local day · send the large suitcase ahead to Kyoto", "overview": "A deliberately light day back in Yokkaichi proper — the one must-do is sending the large suitcase ahead via takkyubin so you can travel to the ryokan tomorrow with only carry-on/overnight bags.", "weather": "Mid-October — mild, ~17–22°C / 63–72°F", "walking": "~3–4 km, easy local wandering", "transport": "On foot / local bus around Yokkaichi", "schedule": [{"time": "Morning", "plan": "Pack the large suitcase for forwarding; keep out only what you need through Yunoyama"}, {"time": "Midday", "plan": "Send suitcase via takkyubin at the hotel front desk — destination Cross Hotel Kyoto"}, {"time": "Afternoon", "plan": "Local Yokkaichi wandering — Isshin-dori arcade, Suwa Shrine"}, {"time": "Evening", "plan": "Miyako Hotel Yokkaichi check-in, easy dinner"}], "tour": {"intro": "A short, optional local loop from the hotel — today is about the luggage handoff, not sightseeing.", "stops": [{"name": "Suwa Shrine, Yokkaichi (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Suwa%20Shrine%20Yokkaichi", "address": "2 Suwaeki-dori, Yokkaichi, Mie", "addressUrl": "https://www.google.com/maps/search/?api=1&query=2%20Suwaeki-dori%2C%20Yokkaichi%2C%20Mie", "desc": "Yokkaichi's central Shinto shrine, tucked beside the Isshin-dori shopping arcade — a quiet stop on an easy day."}, {"name": "Isshin-dori Arcade (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Isshindori%20Shopping%20Street%20Yokkaichi", "address": "Suwaeki-dori, Yokkaichi, Mie", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Suwaeki-dori%2C%20Yokkaichi%2C%20Mie", "desc": "The covered shopping arcade at the heart of Yokkaichi — local shops, cafes, and a good spot to pick up a coffee or a snack."}]}, "callouts": [{"title": "🧳 Hard anchor: send the suitcase today", "body": "Locked suitcase (66×43×30 cm = 139 cm) → Miyako Hotel Yokkaichi to Cross Hotel Kyoto, requested delivery Oct 20. Label it with the exact reservation name and check-in date 10/21/2026. From here through Yunoyama you're on carry-on/overnight luggage only."}, {"title": "🧾 Keep the receipt", "body": "Hold the takkyubin receipt until the suitcase is physically back in your hands at Shinagawa on Oct 26."}], "eat": [{"cat": "🍽 Dinner", "rec": "Casual, near the hotel", "notes": "Flexible — no reservation."}], "foods": [], "good": {"photo": "—", "coffee": "Isshin-dori arcade cafes", "restrooms": "Isshin-dori arcade", "rainy": "The covered arcade works well in light rain", "packing": "Double-check the forwarded suitcase's label before handing it over — exact reservation name and 10/21/2026 check-in date."}}, {"n": 7, "weekday": "Tuesday", "date": "October 20", "iso": "2026-10-20", "short": "Tue, Oct 20", "headline": "Yokkaichi → Yunoyama", "subtitle": "Gozaisho Ropeway if weather cooperates → Shikanoyu ryokan ~3:00 PM", "overview": "A short local-train hop to Yunoyama Onsen, with the Gozaisho Ropeway as the day's centerpiece if wind, weather and visibility allow — but the ryokan's ~3:00 PM check-in target is the one thing not to compromise.", "weather": "Mid-October in the mountains — cooler than the coast; check wind/visibility for the ropeway morning-of", "walking": "~2–3 km plus any ropeway-top walking", "transport": "Yokkaichi → Yunoyama by local train, day-of", "schedule": [{"time": "Morning", "plan": "Check out of Miyako Hotel Yokkaichi"}, {"time": "~9:30", "plan": "Local train, Yokkaichi → Yunoyama"}, {"time": "10:00–13:00", "plan": "Gozaisho Ropeway — day-of decision based on conditions"}, {"time": "~14:00", "plan": "Transfer to Shikanoyu Hotel"}, {"time": "~15:00", "plan": "Shikanoyu check-in (window 15:00–19:00)"}, {"time": "Evening", "plan": "Kaiseki dinner, included with the ryokan plan"}], "tour": {"intro": "Gozaisho goes first, since it's the whole point of the morning and is weather-dependent — not a loop, since the day runs straight from Yokkaichi to the ropeway to the ryokan.", "stops": [{"transit": true, "name": "Yokkaichi → Yunoyama", "url": "https://www.google.com/maps/search/?api=1&query=Yunoyama%20Onsen%20Station", "desc": "Local train, day-of decision — short hop into Yunoyama Onsen."}, {"name": "Gozaisho Ropeway (optional — weather dependent)", "url": "https://www.google.com/maps/search/?api=1&query=Gozaisho%20Ropeway%20Yunoyama", "address": "Yunoyama Onsen, Komono, Mie", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Yunoyama%20Onsen%2C%20Komono%2C%20Mie", "desc": "A cable car up Mt. Gozaisho (1,212 m) with sweeping views over the Suzuka mountains and, on a clear day, Ise Bay. Go only if weather, wind and visibility cooperate — and watch the clock: this cannot run late into the Shikanoyu check-in window."}, {"transit": true, "name": "Gozaisho → Shikanoyu Hotel", "url": "https://www.google.com/maps/search/?api=1&query=Shikanoyu%20Hotel%20Yunoyama%20Onsen", "desc": "Short local transfer to the ryokan — allow enough buffer to arrive by ~3:00 PM."}]}, "callouts": [{"title": "⏰ Hard anchor: Shikanoyu ~3:00 PM", "body": "Check-in window is 15:00–19:00; target arrival ~15:00. Don't let Gozaisho push this late — if conditions are marginal, skip the ropeway rather than risk the check-in window."}, {"title": "🎫 Buy Gozaisho tickets only if conditions warrant", "body": "This is a genuine day-of call on weather, wind and visibility, not a booked reservation."}], "eat": [{"cat": "🍽 Dinner", "rec": "Shikanoyu Kaiseki Dinner", "notes": "Included with the ryokan plan — [Early Bird 30] Ise-Mizusawa Beef Teppanyaki / Standard Kaiseki."}], "foods": [{"name": "Ise-Mizusawa Beef", "desc": "A prized local Mie-prefecture wagyu, served teppanyaki-style as part of tonight's ryokan dinner plan."}], "good": {"photo": "Suzuka mountain views from the Gozaisho Ropeway, if it runs", "coffee": "Shikanoyu's sweets café", "restrooms": "Ropeway base station; Shikanoyu Hotel", "rainy": "Skip the ropeway and head straight to the ryokan to relax before dinner", "packing": "Ryokan stay — bring/wear layers; yukata and slippers are provided. Checkout by 10:00 tomorrow."}}, {"n": 8, "weekday": "Wednesday", "date": "October 21", "iso": "2026-10-21", "short": "Wed, Oct 21", "headline": "Yunoyama → Kyoto — Central Kyoto Walk", "subtitle": "Ryokan morning, then an exploratory loop: Nishiki → Teramachi → Kamo River → Gion → Pontocho", "overview": "A relaxed ryokan morning, then Kintetsu and Shinkansen on to Kyoto. The afternoon is intentionally exploratory rather than temple-heavy — a loop through Nishiki Market, the covered arcades, the Kamo River, Gion and Pontocho, all within walking distance of Cross Hotel Kyoto.", "weather": "Mid-October Kyoto — mild, ~16–22°C / 61–72°F", "walking": "~5–6 km, flat central Kyoto", "transport": "Yunoyama → Yokkaichi → Nagoya (Kintetsu), then Nagoya → Kyoto (Shinkansen, Ordinary Reserved). Book by 9/21.", "schedule": [{"time": "Morning", "plan": "Ryokan breakfast, relaxed checkout by 10:00"}, {"time": "~10:30", "plan": "Kintetsu, Yunoyama → Yokkaichi → Nagoya"}, {"time": "~12:30", "plan": "Shinkansen, Nagoya → Kyoto (Ordinary Reserved)"}, {"time": "~14:00", "plan": "Cross Hotel Kyoto check-in"}, {"time": "14:30", "plan": "Nishiki Market"}, {"time": "15:30", "plan": "Teramachi / Shinkyogoku arcades"}, {"time": "16:30", "plan": "Kamo River walk"}, {"time": "17:15", "plan": "Gion"}, {"time": "18:15", "plan": "Pontocho / Kiyamachi — dinner"}], "tour": {"intro": "A loop from Cross Hotel Kyoto: north to Nishiki Market and the covered arcades, east across the Kamo River to Gion, then back west through Pontocho — which sits a few minutes from the hotel, closing the circle.", "stops": [{"transit": true, "name": "Yunoyama → Kyoto", "url": "https://www.google.com/maps/search/?api=1&query=Kyoto%20Station", "desc": "Kintetsu Yunoyama → Yokkaichi → Nagoya, then Tokaido Shinkansen Nagoya → Kyoto, Ordinary Reserved. About 2.5 hours door to door."}, {"name": "Nishiki Market", "url": "https://www.google.com/maps/search/?api=1&query=Nishiki%20Market%2C%20Kyoto", "address": "Nishikikoji-dori, Nakagyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Nishikikoji-dori%2C%20Nakagyo-ku%2C%20Kyoto", "desc": "Kyoto's 400-year-old covered food market — 'Kyoto's Kitchen.' A five-block grazing walk of pickles, skewers, sweets and knife shops; a five-minute walk from the hotel."}, {"name": "Teramachi / Shinkyogoku Arcades", "url": "https://www.google.com/maps/search/?api=1&query=Teramachi%20Shopping%20Street%2C%20Kyoto", "address": "Teramachi-dori, Nakagyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Teramachi-dori%2C%20Nakagyo-ku%2C%20Kyoto", "desc": "Two parallel covered shopping arcades running north–south — temples tucked between shopfronts on Teramachi, younger and more youth-oriented on Shinkyogoku."}, {"name": "Kamo River", "url": "https://www.google.com/maps/search/?api=1&query=Kamogawa%20Delta%2C%20Kyoto", "address": "Kamogawa, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Kamogawa%2C%20Kyoto", "desc": "Kyoto's central river, lined with a walking/cycling path and famous for the stepping stones near the Demachiyanagi delta. A calm stretch between the shopping arcades and Gion."}, {"name": "Gion", "url": "https://www.google.com/maps/search/?api=1&query=Gion%20District%2C%20Kyoto", "address": "Gion, Higashiyama-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Gion%2C%20Higashiyama-ku%2C%20Kyoto", "desc": "Kyoto's most famous geisha district — Hanamikoji-dori's lattice-fronted machiya buildings are the classic postcard image. An easy pre-dinner wander; keep voices down and don't block or chase geiko/maiko for photos."}, {"name": "Pontocho / Kiyamachi", "url": "https://www.google.com/maps/search/?api=1&query=Pontocho%20Alley%2C%20Kyoto", "address": "Pontocho, Nakagyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Pontocho%2C%20Nakagyo-ku%2C%20Kyoto", "desc": "A narrow lantern-lit alley of restaurants and bars between the Kamo River and Kiyamachi's willow-lined canal — Kyoto's classic evening dining street, a few minutes from Cross Hotel Kyoto."}]}, "callouts": [{"title": "🚶 Keep it exploratory", "body": "This afternoon is deliberately not temple-heavy — a loosely-paced wander sets up the early start needed for tomorrow's historic Kyoto day."}], "eat": [{"cat": "🍽 Dinner", "rec": "Pontocho or Kiyamachi", "notes": "No reservation — pick whatever looks good along the alley."}], "foods": [{"name": "Yuba (tofu skin)", "desc": "A Kyoto specialty sold fresh at Nishiki Market stalls — delicate and worth trying plain or with a little soy."}, {"name": "Kyoto-style pickles (tsukemono)", "desc": "Nishiki Market is lined with pickle shops selling samples — a good low-cost way to graze the market."}], "good": {"photo": "Pontocho's lantern-lit alley at dusk", "coffee": "Nishiki Market has several stand-up coffee stalls", "restrooms": "Nishiki Market and Kyoto Station both have facilities", "rainy": "The covered arcades (Nishiki, Teramachi, Shinkyogoku) keep you dry for most of the route", "packing": "Comfortable shoes — today mixes market grazing with a fair bit of flat walking."}}, {"n": 9, "weekday": "Thursday", "date": "October 22", "iso": "2026-10-22", "short": "Thu, Oct 22", "headline": "Historic Kyoto", "subtitle": "Kiyomizu-dera at 7:00 AM → Higashiyama → Nanzen-ji → Philosopher's Path", "overview": "An early start to catch Kiyomizu-dera before the crowds, then a point-to-point run north through the Higashiyama lanes, a taxi hop to Nanzen-ji, and the Philosopher's Path, with Ginkaku-ji as an optional cap to the afternoon. This is a straight run north rather than a loop — plan a taxi or bus back to the hotel in the evening.", "weather": "Mid-October Kyoto — mild, ~16–22°C / 61–72°F, clear mornings typical", "walking": "~9–10 km — the longest walking day of the trip", "transport": "On foot through Higashiyama; one taxi hop north to Nanzen-ji; bus or taxi back to the hotel in the evening", "schedule": [{"time": "6:30", "plan": "Wake / light breakfast"}, {"time": "7:00", "plan": "Kiyomizu-dera"}, {"time": "8:30–11:00", "plan": "Sannenzaka → Ninenzaka → Yasaka Pagoda → Higashiyama"}, {"time": "11:00", "plan": "Taxi north to Nanzen-ji"}, {"time": "11:30–13:00", "plan": "Nanzen-ji"}, {"time": "13:00", "plan": "Yudofu lunch"}, {"time": "14:00–15:30", "plan": "Philosopher's Path"}, {"time": "15:30", "plan": "Optional: Ginkaku-ji"}, {"time": "Evening", "plan": "Flexible — taxi or bus back to Cross Hotel Kyoto"}], "tour": {"intro": "Point-to-point south to north through the Higashiyama corridor, not a loop: Kiyomizu-dera opens the day (crowd-sensitive — go right at 7:00), the historic lanes lead north to Yasaka, then a deliberate taxi hop skips the dead ground to Nanzen-ji so you're not backtracking on foot, and the Philosopher's Path continues the same northward line to Ginkaku-ji. Plan transit back to the hotel this evening rather than walking it.", "stops": [{"name": "Kiyomizu-dera", "url": "https://www.google.com/maps/search/?api=1&query=Kiyomizu-dera%2C%20Kyoto", "address": "1-294 Kiyomizu, Higashiyama-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1-294%20Kiyomizu%2C%20Higashiyama-ku%2C%20Kyoto", "desc": "Kyoto's iconic wooden temple, its stage jutting out over the hillside on 400-year-old joinery, no nails. Go right at opening (7:00) — this is one of Kyoto's most crowd-sensitive sights by mid-morning."}, {"name": "Sannenzaka & Ninenzaka", "url": "https://www.google.com/maps/search/?api=1&query=Sannenzaka%20Kyoto", "address": "Sannenzaka, Higashiyama-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Sannenzaka%2C%20Higashiyama-ku%2C%20Kyoto", "desc": "Two consecutive cobbled slopes lined with Edo-period wooden shopfronts, teahouses and craft stores — the classic postcard approach to Kiyomizu-dera, best walked slowly downhill from the temple."}, {"name": "Yasaka Pagoda (Hokan-ji)", "url": "https://www.google.com/maps/search/?api=1&query=Yasaka%20Pagoda%20Kyoto", "address": "388 Kiyomizu, Higashiyama-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=388%20Kiyomizu%2C%20Higashiyama-ku%2C%20Kyoto", "desc": "A five-story pagoda rising above the Higashiyama rooftops — one of Kyoto's most photographed views, especially from the sloped lane just south of it."}, {"name": "Higashiyama District", "url": "https://www.google.com/maps/search/?api=1&query=Higashiyama%20District%20Kyoto", "address": "Higashiyama-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Higashiyama-ku%2C%20Kyoto", "desc": "The wider preserved historic quarter connecting Kiyomizu-dera to Gion — narrow lanes, machiya buildings, and a good stretch for a slow browse before the taxi hop north."}, {"transit": true, "name": "Higashiyama → Nanzen-ji", "url": "https://www.google.com/maps/search/?api=1&query=Nanzen-ji%20Temple%2C%20Kyoto", "desc": "A taxi north (~10–15 min) skips a long, unremarkable walk and gets you to Nanzen-ji with time to enjoy it before lunch."}, {"name": "Nanzen-ji", "url": "https://www.google.com/maps/search/?api=1&query=Nanzen-ji%20Temple%2C%20Kyoto", "address": "Nanzenji Fukuchicho, Sakyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Nanzenji%20Fukuchicho%2C%20Sakyo-ku%2C%20Kyoto", "desc": "A major Zen temple complex with a monumental wooden Sanmon gate you can climb, dry rock gardens, and an incongruous 19th-century red-brick aqueduct running straight through the grounds."}, {"name": "Philosopher's Path", "url": "https://www.google.com/maps/search/?api=1&query=Philosopher%27s%20Path%20Kyoto", "address": "Philosopher's Path, Sakyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Philosopher%27s%20Path%2C%20Sakyo-ku%2C%20Kyoto", "desc": "A stone canal-side walking path lined with cherry trees (better known for spring blossoms, but a pleasant tree-lined stroll in October too), running north from Nanzen-ji toward Ginkaku-ji, dotted with small cafes and shops."}, {"name": "Ginkaku-ji (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Ginkakuji%20Silver%20Pavilion%20Kyoto", "address": "2 Ginkakujicho, Sakyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=2%20Ginkakujicho%2C%20Sakyo-ku%2C%20Kyoto", "desc": "The 'Silver Pavilion' — never actually silvered, but with a raked-sand garden and a moss garden climbing the hillside behind it. A worthwhile cap to the day if energy holds; otherwise call it after the Philosopher's Path."}]}, "callouts": [{"title": "🌅 Why so early", "body": "Kiyomizu-dera gets genuinely crowded by mid-morning. Being there at 7:00 buys quiet, better light for photos, and a calmer start to the longest walking day of the trip."}, {"title": "🚕 The taxi hop is deliberate", "body": "Higashiyama to Nanzen-ji on foot is a long, unrewarding stretch. Taking a taxi keeps the walking focused on the two scenic halves of the day."}], "eat": [{"cat": "🍜 Lunch", "rec": "Yudofu near Nanzen-ji", "notes": "Nanzen-ji is famous for tofu-based kaiseki lunches (yudofu) — Junsei and Okutan are both well-known options right by the temple."}], "foods": [{"name": "Yudofu", "desc": "Simmered hot tofu, a Zen-temple specialty perfected around Nanzen-ji — light, delicate, usually served as a multi-course set."}], "good": {"photo": "Yasaka Pagoda from the sloped lane just south of it, and the Sannenzaka/Ninenzaka approach at opening light", "coffee": "Several small cafes along the Philosopher's Path", "restrooms": "Kiyomizu-dera, Nanzen-ji and the Philosopher's Path all have facilities", "rainy": "Nanzen-ji's covered corridors and Ginkaku-ji's grounds are manageable in light rain; Kiyomizu's outdoor stage is exposed", "packing": "Real walking shoes today — this is the longest on-foot day of the trip, and Sannenzaka/Ninenzaka are cobbled slopes."}}, {"n": 10, "weekday": "Friday", "date": "October 23", "iso": "2026-10-23", "short": "Fri, Oct 23", "headline": "Arashiyama + Special Dinner", "subtitle": "Bamboo Grove morning · relaxed afternoon · Gion Fukushi 6:00 PM", "overview": "Out to Arashiyama in the far west for the bamboo grove, Tenryu-ji and the river, back to central Kyoto by early afternoon, and a deliberately quiet rest before the evening's booked dinner at Gion Fukushi. No second major attraction today — the afternoon is for resting up.", "weather": "Mid-October Kyoto — mild, ~16–22°C / 61–72°F", "walking": "~6 km including Arashiyama", "transport": "Randen tram or JR Sagano Line to/from Arashiyama (~20–25 min each way)", "schedule": [{"time": "Early morning", "plan": "Train/tram to Arashiyama"}, {"time": "8:00", "plan": "Arashiyama Bamboo Grove"}, {"time": "8:45", "plan": "Tenryu-ji"}, {"time": "10:00", "plan": "Togetsukyo Bridge"}, {"time": "11:00", "plan": "Lunch in Arashiyama"}, {"time": "12:30", "plan": "Train/tram back to central Kyoto"}, {"time": "14:30–16:30", "plan": "Rest, or a light optional wander in Gion"}, {"time": "18:00", "plan": "Gion Fukushi — dinner (booked, 2 people)"}], "tour": {"intro": "Furthest-first: Arashiyama is the far west edge of Kyoto, so it goes first thing while it's least crowded. The train back drops you close to the hotel and to Gion Fukushi, closing the loop near where the evening's dinner is.", "stops": [{"transit": true, "name": "Kyoto → Arashiyama", "url": "https://www.google.com/maps/search/?api=1&query=Arashiyama%20Station%2C%20Kyoto", "desc": "Randen (Keifuku) tram from central Kyoto, or the JR Sagano Line from Kyoto Station — about 20–25 minutes either way."}, {"name": "Arashiyama Bamboo Grove", "url": "https://www.google.com/maps/search/?api=1&query=Arashiyama%20Bamboo%20Grove%2C%20Kyoto", "address": "Sagaogurayama Tabuchiyamacho, Ukyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Sagaogurayama%20Tabuchiyamacho%2C%20Ukyo-ku%2C%20Kyoto", "desc": "A few hundred meters of towering bamboo arching over a stone path — one of Kyoto's most photographed spots, and genuinely peaceful before the day-trip crowds arrive."}, {"name": "Tenryu-ji", "url": "https://www.google.com/maps/search/?api=1&query=Tenryuji%20Temple%2C%20Kyoto", "address": "68 Susukinobabacho, Ukyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=68%20Susukinobabacho%2C%20Ukyo-ku%2C%20Kyoto", "desc": "A UNESCO World Heritage Zen temple right beside the bamboo grove, with one of Kyoto's finest strolling gardens — a borrowed-scenery pond garden backed by the Arashiyama hills."}, {"name": "Togetsukyo Bridge", "url": "https://www.google.com/maps/search/?api=1&query=Togetsukyo%20Bridge%2C%20Kyoto", "address": "Saga Nakanoshima-cho, Ukyo-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Saga%20Nakanoshima-cho%2C%20Ukyo-ku%2C%20Kyoto", "desc": "Arashiyama's wooden-railed bridge over the Katsura River, with the forested hills behind it — the classic Arashiyama photo, and a nice spot to linger before lunch."}, {"name": "Gion (optional light wander)", "url": "https://www.google.com/maps/search/?api=1&query=Gion%20District%2C%20Kyoto", "address": "Gion, Higashiyama-ku, Kyoto", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Gion%2C%20Higashiyama-ku%2C%20Kyoto", "desc": "A quiet pre-dinner stroll near the hotel if energy allows — nothing structured. Skip it and rest instead if today's walking has been enough; there's no need to add another major sight this afternoon."}]}, "callouts": [{"title": "🍽 Gion Fukushi is the anchor tonight", "body": "6:00 PM, 2 people, Chef's Recommended Dinner Course — BOOKED."}, {"title": "🧳 Hard anchor: send the second suitcase today", "body": "Large suitcase → Cross Hotel Kyoto to Shinagawa Prince Hotel Main Tower Front Desk (4-10-30 Takanawa, Minato-ku, Tokyo 108-8611). Requested delivery Oct 26. Label with the exact reservation name, stay date 10/26/2026, 'Main Tower', and contact info. From here through Hiroshima you're on carry-ons only — use the bag mainly for souvenirs and worn items."}, {"title": "🧘 Keep the afternoon light", "body": "Avoid adding another major Kyoto attraction today — this is deliberately a rest afternoon before the special dinner."}], "eat": [{"cat": "🍽 Lunch", "rec": "Arashiyama", "notes": "Plenty of casual options near Tenryu-ji and the bridge — no reservation needed."}, {"cat": "🍽 Dinner", "rec": "Gion Fukushi", "notes": "6:00 PM JST, 2 people, Chef's Recommended Dinner Course — BOOKED."}], "foods": [{"name": "Arashiyama sweet potato / matcha soft-serve", "desc": "Seasonal (October = sweet potato and chestnut season) treats sold along the approach to the bamboo grove."}], "good": {"photo": "The Bamboo Grove path in early morning light, and Togetsukyo Bridge from the riverbank", "coffee": "Several cafes along the Arashiyama main street", "restrooms": "Tenryu-ji and the Arashiyama station area", "rainy": "Tenryu-ji's covered corridors offer some shelter; the bamboo grove and bridge are outdoors", "packing": "Keep the takkyubin receipt for today's suitcase forwarding safe until you reclaim it at Shinagawa."}}, {"n": 11, "weekday": "Saturday", "date": "October 24", "iso": "2026-10-24", "short": "Sat, Oct 24", "headline": "Kyoto → Hiroshima — Peace Memorial District", "subtitle": "Direct Shinkansen · Atomic Bomb Dome & Peace Park · Museum 5:30 PM", "overview": "A direct Nozomi to Hiroshima, bags down by noon, then an afternoon through the Peace Memorial district — the Atomic Bomb Dome, Peace Memorial Park, the Children's Peace Monument and the Cenotaph — building toward the timed museum entry at 5:30 PM.", "weather": "Late October Hiroshima — mild, ~15–21°C / 59–70°F", "walking": "~5 km around the Peace Memorial district", "transport": "Kyoto → Hiroshima: direct Nozomi Shinkansen, Ordinary Reserved. Book by 9/24.", "schedule": [{"time": "9:30–10:00", "plan": "Nozomi Shinkansen departs Kyoto"}, {"time": "~11:20", "plan": "Arrive Hiroshima; luggage drop at Hotel Intergate Hiroshima"}, {"time": "13:00", "plan": "Atomic Bomb Dome"}, {"time": "13:45", "plan": "Peace Memorial Park"}, {"time": "14:30", "plan": "Children's Peace Monument"}, {"time": "15:00", "plan": "Cenotaph for the A-bomb Victims"}, {"time": "17:30", "plan": "Hiroshima Peace Memorial Museum (booked, timed entry)"}, {"time": "Evening", "plan": "Casual dinner — Hiroshima-style okonomiyaki is a good fit"}], "tour": {"intro": "One continuous walk through the Peace Memorial district, ending at the museum at its booked time — the hotel is a short walk from the park, so the day naturally ends close to home base.", "stops": [{"transit": true, "name": "Kyoto → Hiroshima", "url": "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Station", "desc": "Direct Nozomi Shinkansen, Ordinary Reserved — about 1 hr 40 min."}, {"transit": true, "name": "Hiroshima Station → hotel", "url": "https://www.google.com/maps/search/?api=1&query=Hotel%20Intergate%20Hiroshima", "desc": "Streetcar or a ~15-minute walk to drop bags before the afternoon."}, {"name": "Atomic Bomb Dome", "url": "https://www.google.com/maps/search/?api=1&query=Atomic%20Bomb%20Dome%2C%20Hiroshima", "address": "1-10 Otemachi, Naka-ku, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1-10%20Otemachi%2C%20Naka-ku%2C%20Hiroshima", "desc": "The skeletal ruin of the former Industrial Promotion Hall, left standing as it was after the August 6, 1945 bombing — a UNESCO World Heritage Site and Hiroshima's defining landmark."}, {"name": "Peace Memorial Park", "url": "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Peace%20Memorial%20Park", "address": "1-1 Nakajimacho, Naka-ku, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1-1%20Nakajimacho%2C%20Naka-ku%2C%20Hiroshima", "desc": "A broad riverside park built as a place of remembrance and peace, connecting the Dome to the museum and the park's several memorials."}, {"name": "Children's Peace Monument", "url": "https://www.google.com/maps/search/?api=1&query=Children%27s%20Peace%20Monument%20Hiroshima", "address": "1 Nakajimacho, Naka-ku, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1%20Nakajimacho%2C%20Naka-ku%2C%20Hiroshima", "desc": "A statue of Sadako Sasaki holding a golden crane, surrounded by thousands of paper cranes sent from schoolchildren worldwide — inspired by Sadako's own story after developing leukemia from the bombing."}, {"name": "Cenotaph for the A-bomb Victims", "url": "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Peace%20Memorial%20Cenotaph", "address": "1 Nakajimacho, Naka-ku, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1%20Nakajimacho%2C%20Naka-ku%2C%20Hiroshima", "desc": "A saddle-shaped stone arch holding the register of the bombing's victims, precisely aligned so the Peace Flame and the Atomic Bomb Dome are framed through it."}, {"name": "Hiroshima Peace Memorial Museum", "url": "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Peace%20Memorial%20Museum", "address": "1-2 Nakajimacho, Naka-ku, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1-2%20Nakajimacho%2C%20Naka-ku%2C%20Hiroshima", "desc": "The core historical account of the atomic bombing, its human toll and the postwar peace movement — BOOKED, timed entry 5:30 PM. Keep the confirmation handy; allow 60–90 minutes."}]}, "callouts": [{"title": "🎟️ Hard anchor: Museum entry 5:30 PM", "body": "Timed and booked — keep the confirmation readily accessible on your phone today."}, {"title": "🥘 Try okonomiyaki tonight", "body": "Hiroshima-style okonomiyaki (layered with noodles, unlike Osaka's mixed-batter style) is the natural, casual choice for dinner — no reservation needed."}], "eat": [{"cat": "🍽 Dinner", "rec": "Hiroshima-style okonomiyaki", "notes": "Casual and flexible — Okonomimura is a well-known multi-stall okonomiyaki building downtown if you want variety."}], "foods": [{"name": "Hiroshima-style okonomiyaki", "desc": "Layered rather than mixed — cabbage, pork, a full portion of yakisoba noodles, and a fried egg, stacked and griddled to order."}], "good": {"photo": "The Atomic Bomb Dome from across the river at Peace Memorial Park", "coffee": "Cafes around Hondori, a short walk from the park", "restrooms": "Peace Memorial Park and the museum both have facilities", "rainy": "The museum is indoors; the park's memorials are outdoor but the walk between them is short", "packing": "Keep the museum's timed-entry confirmation easy to pull up quickly at the door."}}, {"n": 12, "weekday": "Sunday", "date": "October 25", "iso": "2026-10-25", "short": "Sun, Oct 25", "headline": "Miyajima", "subtitle": "Full day, tide-aware — floating torii at high tide, Daisho-in, Mt. Misen", "overview": "A full day trip to Miyajima, timed around the tide: an early ferry to catch the floating torii at high tide, a wander through the town and Daisho-in, and Mt. Misen by ropeway if conditions cooperate — heading back toward the waterfront near low tide before returning to Hiroshima.", "weather": "Late October — mild, ~15–21°C / 59–70°F; check tide tables the morning of", "walking": "~7–8 km including Mt. Misen if the ropeway runs", "transport": "JR Sanyo Line to Miyajimaguchi + JR/Miyajima Matsudai ferry — target arrival ~8:15–8:30 AM", "schedule": [{"time": "Early", "plan": "JR + ferry to Miyajima, targeting ~8:15–8:30 AM arrival"}, {"time": "8:30", "plan": "Itsukushima Shrine & the floating torii (high tide)"}, {"time": "10:00", "plan": "Miyajima town — omotesando street, snacks"}, {"time": "11:00", "plan": "Daisho-in"}, {"time": "12:30", "plan": "Lunch — oysters, anago"}, {"time": "13:30", "plan": "Mt. Misen Ropeway, if weather/operations cooperate"}, {"time": "16:00", "plan": "Back to the waterfront near lower tide"}, {"time": "17:00", "plan": "Ferry + JR back to Hiroshima"}], "tour": {"intro": "Tide-sensitive, so the shrine goes first at high tide, then the day loops through town, temple and (optionally) the mountain before returning to the same ferry pier — a natural loop given the island's single arrival point.", "stops": [{"transit": true, "name": "Hiroshima → Miyajima", "url": "https://www.google.com/maps/search/?api=1&query=Miyajimaguchi%20Station", "desc": "JR Sanyo Line to Miyajimaguchi, then the JR or Miyajima Matsudai ferry (~10 min) — target arrival ~8:15–8:30 AM."}, {"name": "Itsukushima Shrine & the floating torii", "url": "https://www.google.com/maps/search/?api=1&query=Itsukushima%20Shrine%2C%20Miyajima", "address": "1-1 Miyajimacho, Hatsukaichi, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=1-1%20Miyajimacho%2C%20Hatsukaichi%2C%20Hiroshima", "desc": "A UNESCO World Heritage shrine built on stilts over the water, with the iconic vermillion torii gate appearing to float at high tide. Go early — this is genuinely tide- and crowd-sensitive."}, {"name": "Miyajima Town (omotesando)", "url": "https://www.google.com/maps/search/?api=1&query=Omotesando%20Shopping%20Street%20Miyajima", "address": "Miyajimacho, Hatsukaichi, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Miyajimacho%2C%20Hatsukaichi%2C%20Hiroshima", "desc": "The main approach street, lined with shops selling grilled anago, oysters, and momiji manju (maple-leaf cakes) — as much a food crawl as a shopping street. Deer roam freely; don't feed them or let them near open bags."}, {"name": "Daisho-in", "url": "https://www.google.com/maps/search/?api=1&query=Daishoin%20Temple%20Miyajima", "address": "210 Miyajimacho, Hatsukaichi, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=210%20Miyajimacho%2C%20Hatsukaichi%2C%20Hiroshima", "desc": "A less-crowded temple complex on the way up Mt. Misen, with spinning sutra wheels lining the entrance stairs and hundreds of small Jizo statues in knitted caps."}, {"name": "Mt. Misen Ropeway (optional — weather/ops dependent)", "url": "https://www.google.com/maps/search/?api=1&query=Mount%20Misen%20Ropeway%20Miyajima", "address": "Miyajimacho, Hatsukaichi, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Miyajimacho%2C%20Hatsukaichi%2C%20Hiroshima", "desc": "A two-stage cable car up Miyajima's sacred mountain, with views back over the Inland Sea. Recheck operating and reservation status shortly before the trip — skip without regret if conditions or bookings don't cooperate."}, {"name": "Miyajima Waterfront (low tide)", "url": "https://www.google.com/maps/search/?api=1&query=Miyajima%20Pier", "address": "Miyajimacho, Hatsukaichi, Hiroshima", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Miyajimacho%2C%20Hatsukaichi%2C%20Hiroshima", "desc": "Near low tide the torii gate becomes walkable on exposed sand — a completely different look from the morning's floating view, and a good spot to end the day before the ferry back."}]}, "callouts": [{"title": "🌊 This is a tide-aware day", "body": "High tide in the morning makes the torii appear to float; low tide later exposes the sand beneath it. Check the tide table the morning of and let it set the day's pace rather than a fixed schedule."}, {"title": "🚡 Recheck the ropeway before you go", "body": "Miyajima Ropeway operating and reservation status should be rechecked shortly before departure — it's explicitly optional and weather/operations dependent."}], "eat": [{"cat": "🦪 Lunch", "rec": "Oysters & anago (conger eel) on omotesando", "notes": "Miyajima's two signature foods — widely available from street stalls and small restaurants along the main approach."}], "foods": [{"name": "Grilled oysters", "desc": "Miyajima is one of Japan's top oyster-growing areas — grilled to order at stalls along omotesando."}, {"name": "Anago (conger eel)", "desc": "Simmered or grilled conger eel, often served over rice — a Miyajima specialty distinct from unagi."}, {"name": "Momiji manju", "desc": "Maple-leaf-shaped cakes filled with sweet bean paste, custard or chocolate — Miyajima's classic souvenir sweet."}], "good": {"photo": "The floating torii at high tide from the shrine, and again on the exposed sand at low tide", "coffee": "Cafes along omotesando", "restrooms": "Itsukushima Shrine and the ferry terminal both have facilities", "rainy": "Daisho-in's covered halls offer some shelter; the ropeway may suspend in poor weather", "packing": "Watch your bags and food around the island's deer — they will grab anything within reach."}}, {"n": 13, "weekday": "Monday", "date": "October 26", "iso": "2026-10-26", "short": "Mon, Oct 26", "headline": "Hiroshima → Tokyo (Shinagawa)", "subtitle": "Direct Shinkansen · suitcase reunion · flexible final Tokyo evening", "overview": "A direct Nozomi back to Tokyo, reclaiming the forwarded suitcase at the Shinagawa Prince front desk, with the rest of the afternoon and evening intentionally open for whatever sounds good on the day.", "weather": "Late October Tokyo — mild, ~16–21°C / 61–70°F", "walking": "Flexible, depending on the evening's plans", "transport": "Hiroshima → Shinagawa: direct Nozomi Shinkansen, Ordinary Reserved by default. Book by 9/26.", "schedule": [{"time": "Morning", "plan": "Checkout, Hotel Intergate Hiroshima"}, {"time": "Midday", "plan": "Direct Nozomi Shinkansen, Hiroshima → Shinagawa"}, {"time": "~16:00", "plan": "Arrive Shinagawa; check in to Shinagawa Prince — Main Tower"}, {"time": "16:15", "plan": "Reclaim the forwarded suitcase at the Main Tower front desk"}, {"time": "Afternoon/Evening", "plan": "Flexible — final Tokyo time, intentionally open"}], "tour": {"intro": "Only a light, optional stroll near the hotel today — the point of this leg is the transfer and the suitcase handoff, with the evening left open on purpose.", "stops": [{"transit": true, "name": "Hiroshima → Shinagawa", "url": "https://www.google.com/maps/search/?api=1&query=Shinagawa%20Station", "desc": "Direct Nozomi Shinkansen, Ordinary Reserved by default — about 4 hours."}, {"name": "Sengaku-ji Temple (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Sengakuji%20Temple%2C%20Tokyo", "address": "2-11-1 Takanawa, Minato-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=2-11-1%20Takanawa%2C%20Minato-ku%2C%20Tokyo", "desc": "A short walk from Shinagawa Prince — the temple famous as the burial site of the 47 Ronin. A quiet, historically rich stop if the evening opens up for it."}]}, "callouts": [{"title": "🧳 Hard anchor: suitcase reunion", "body": "The large suitcase forwarded from Kyoto arrives at the Shinagawa Prince Hotel — Main Tower front desk. Confirm it's there before you settle in, and keep both takkyubin receipts until you've physically got both bags back."}, {"title": "🌆 Tonight is intentionally open", "body": "No fixed plan — a relaxed dinner near Shinagawa, or a short trip into central Tokyo if energy allows, both work."}], "eat": [{"cat": "🍽 Dinner", "rec": "Shinagawa or central Tokyo", "notes": "Flexible — no reservation, decide on the day based on energy levels."}], "foods": [], "good": {"photo": "—", "coffee": "Shinagawa Station has plenty of options", "restrooms": "Shinagawa Station and the hotel", "rainy": "Shinagawa Station's underground concourse connects to shopping if the weather turns", "packing": "Repack once both suitcases are reunited — tomorrow's flight is in the evening, so there's time to sort bags properly tonight."}}, {"n": 14, "weekday": "Tuesday", "date": "October 27", "iso": "2026-10-27", "short": "Tue, Oct 27", "headline": "Final Tokyo Time → HND", "subtitle": "Stay close to Shinagawa · leave ~4:15 PM · flight 8:00 PM", "overview": "The last daytime stretch is intentionally open, but geographically conservative — the 8:00 PM flight means staying close to Shinagawa rather than venturing back into central Tokyo. A relaxed morning, a light local option or two, then head for Haneda in good time.", "weather": "Late October Tokyo — mild, ~16–21°C / 61–70°F", "walking": "Light, local only", "transport": "Shinagawa → HND by day-of local rail", "schedule": [{"time": "Morning", "plan": "Relaxed breakfast, final packing"}, {"time": "Late morning", "plan": "Hotel checkout"}, {"time": "Midday", "plan": "Light local option near Shinagawa, or simply relax"}, {"time": "~16:15", "plan": "Leave Shinagawa for HND"}, {"time": "20:00", "plan": "Flight departs Haneda (HND)"}], "tour": {"intro": "Deliberately minimal and close to the hotel — no loop needed today, just one or two easy options within a few minutes of Shinagawa.", "stops": [{"name": "Gotenyama Garden (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Gotenyama%20Garden%20Shinagawa", "address": "4-chome Kita-Shinagawa, Shinagawa-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=4-chome%20Kita-Shinagawa%2C%20Shinagawa-ku%2C%20Tokyo", "desc": "A small, quiet public garden a few minutes from the Shinagawa Prince — a low-key way to spend a last free hour without straying far."}, {"name": "Sengaku-ji Temple (optional, if not done yesterday)", "url": "https://www.google.com/maps/search/?api=1&query=Sengakuji%20Temple%2C%20Tokyo", "address": "2-11-1 Takanawa, Minato-ku, Tokyo", "addressUrl": "https://www.google.com/maps/search/?api=1&query=2-11-1%20Takanawa%2C%20Minato-ku%2C%20Tokyo", "desc": "The 47 Ronin burial site, an easy walk from the hotel — a good fallback if it wasn't visited Oct 26."}]}, "callouts": [{"title": "✈️ Hard anchor: leave Shinagawa ~4:15 PM", "body": "For the 8:00 PM Haneda departure. Stay geographically conservative today — nothing that risks a long trip back."}], "eat": [{"cat": "🍽 Lunch", "rec": "Near Shinagawa Station", "notes": "Keep it simple and close — no reason to range far on departure day."}], "foods": [], "good": {"photo": "—", "coffee": "Shinagawa Station", "restrooms": "Shinagawa Station and HND", "rainy": "Shinagawa Station's shops and restaurants are all indoors", "packing": "Final check: passports, chargers, and both suitcases (the forwarded one included) before leaving for HND."}}], "cities": [{"city": "Tokyo", "links": [{"label": "Hotel", "t": "Solaria Nishitetsu Hotel Ginza", "u": "https://www.google.com/maps/search/?api=1&query=Solaria%20Nishitetsu%20Hotel%20Ginza%2C%20Tokyo"}, {"label": "Hotel", "t": "Shinagawa Prince Hotel — Main Tower", "u": "https://www.google.com/maps/search/?api=1&query=Shinagawa%20Prince%20Hotel%20Main%20Tower%2C%204-10-30%20Takanawa%2C%20Minato-ku%2C%20Tokyo"}, {"label": "Station", "t": "Tokyo Station", "u": "https://www.google.com/maps/search/?api=1&query=Tokyo%20Station"}, {"label": "Station", "t": "Shinagawa Station", "u": "https://www.google.com/maps/search/?api=1&query=Shinagawa%20Station%2C%20Tokyo"}], "attractions": [{"t": "Tsukiji Outer Market", "u": "https://www.google.com/maps/search/?api=1&query=Tsukiji%20Outer%20Market%2C%20Tokyo", "note": "food market"}, {"t": "Tokyo Tower", "u": "https://www.google.com/maps/search/?api=1&query=Tokyo%20Tower", "note": "landmark"}, {"t": "Azabudai Hills", "u": "https://www.google.com/maps/search/?api=1&query=Azabudai%20Hills%2C%20Tokyo", "note": "newest district"}, {"t": "Ginza Six", "u": "https://www.google.com/maps/search/?api=1&query=Ginza%20Six%2C%20Tokyo", "note": "shopping, rooftop garden"}, {"t": "Hamarikyu Gardens", "u": "https://www.google.com/maps/search/?api=1&query=Hamarikyu%20Gardens%2C%20Tokyo", "note": "Edo-era garden"}, {"t": "Sengaku-ji Temple", "u": "https://www.google.com/maps/search/?api=1&query=Sengakuji%20Temple%2C%20Tokyo", "note": "47 Ronin"}], "restaurants": [{"t": "Sushi Fujioka", "u": "https://www.google.com/maps/search/?api=1&query=Sushi%20Fujioka%20Nishi-Azabu%20Tokyo", "note": "booked, Oct 15, 6:00 PM"}, {"t": "Tsukiji Outer Market stalls", "u": "https://www.google.com/maps/search/?api=1&query=Tsukiji%20Outer%20Market%2C%20Tokyo", "note": "grazing breakfast"}]}, {"city": "Yokkaichi", "links": [{"label": "Hotel", "t": "Miyako Hotel Yokkaichi", "u": "https://www.google.com/maps/search/?api=1&query=Miyako%20Hotel%20Yokkaichi"}, {"label": "Station", "t": "Kintetsu Yokkaichi Station", "u": "https://www.google.com/maps/search/?api=1&query=Kintetsu%20Yokkaichi%20Station"}], "attractions": [{"t": "Suwa Shrine", "u": "https://www.google.com/maps/search/?api=1&query=Suwa%20Shrine%20Yokkaichi", "note": "central shrine"}, {"t": "Isshin-dori Arcade", "u": "https://www.google.com/maps/search/?api=1&query=Isshindori%20Shopping%20Street%20Yokkaichi", "note": "covered shopping street"}], "restaurants": []}, {"city": "Yunoyama", "links": [{"label": "Hotel", "t": "Shikanoyu Hotel", "u": "https://www.google.com/maps/search/?api=1&query=Shikanoyu%20Hotel%20Yunoyama%20Onsen"}, {"label": "Station", "t": "Yunoyama Onsen Station", "u": "https://www.google.com/maps/search/?api=1&query=Yunoyama%20Onsen%20Station"}], "attractions": [{"t": "Gozaisho Ropeway", "u": "https://www.google.com/maps/search/?api=1&query=Gozaisho%20Ropeway%20Yunoyama", "note": "weather-dependent"}], "restaurants": []}, {"city": "Kyoto", "links": [{"label": "Hotel", "t": "Cross Hotel Kyoto", "u": "https://www.google.com/maps/search/?api=1&query=Cross%20Hotel%20Kyoto"}, {"label": "Station", "t": "Kyoto Station", "u": "https://www.google.com/maps/search/?api=1&query=Kyoto%20Station"}], "attractions": [{"t": "Kiyomizu-dera", "u": "https://www.google.com/maps/search/?api=1&query=Kiyomizu-dera%2C%20Kyoto", "note": "iconic temple"}, {"t": "Nishiki Market", "u": "https://www.google.com/maps/search/?api=1&query=Nishiki%20Market%2C%20Kyoto", "note": "food market"}, {"t": "Arashiyama Bamboo Grove", "u": "https://www.google.com/maps/search/?api=1&query=Arashiyama%20Bamboo%20Grove%2C%20Kyoto", "note": "iconic grove"}, {"t": "Tenryu-ji", "u": "https://www.google.com/maps/search/?api=1&query=Tenryuji%20Temple%2C%20Kyoto", "note": "UNESCO garden"}, {"t": "Nanzen-ji", "u": "https://www.google.com/maps/search/?api=1&query=Nanzen-ji%20Temple%2C%20Kyoto", "note": "Zen temple"}, {"t": "Philosopher's Path", "u": "https://www.google.com/maps/search/?api=1&query=Philosopher%27s%20Path%20Kyoto", "note": "canal-side walk"}, {"t": "Gion", "u": "https://www.google.com/maps/search/?api=1&query=Gion%20District%2C%20Kyoto", "note": "geisha district"}, {"t": "Fushimi Inari Taisha (not on itinerary — optional)", "u": "https://www.google.com/maps/search/?api=1&query=Fushimi%20Inari%20Taisha%2C%20Kyoto", "note": "thousand torii gates"}], "restaurants": [{"t": "Gion Fukushi", "u": "https://www.google.com/maps/search/?api=1&query=Gion%20Fukushi%20Kyoto", "note": "booked, Oct 23, 6:00 PM"}, {"t": "Pontocho / Kiyamachi", "u": "https://www.google.com/maps/search/?api=1&query=Pontocho%20Alley%2C%20Kyoto", "note": "dining alley"}]}, {"city": "Hiroshima", "links": [{"label": "Hotel", "t": "Hotel Intergate Hiroshima", "u": "https://www.google.com/maps/search/?api=1&query=Hotel%20Intergate%20Hiroshima"}, {"label": "Station", "t": "Hiroshima Station", "u": "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Station"}, {"label": "Ferry", "t": "Miyajimaguchi (to Miyajima)", "u": "https://www.google.com/maps/search/?api=1&query=Miyajimaguchi%20Station"}], "attractions": [{"t": "Atomic Bomb Dome", "u": "https://www.google.com/maps/search/?api=1&query=Atomic%20Bomb%20Dome%2C%20Hiroshima", "note": "UNESCO site"}, {"t": "Peace Memorial Park", "u": "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Peace%20Memorial%20Park", "note": "memorial park"}, {"t": "Hiroshima Peace Memorial Museum", "u": "https://www.google.com/maps/search/?api=1&query=Hiroshima%20Peace%20Memorial%20Museum", "note": "booked, Oct 24, 5:30 PM"}, {"t": "Itsukushima Shrine (Miyajima)", "u": "https://www.google.com/maps/search/?api=1&query=Itsukushima%20Shrine%2C%20Miyajima", "note": "floating torii"}, {"t": "Daisho-in (Miyajima)", "u": "https://www.google.com/maps/search/?api=1&query=Daishoin%20Temple%20Miyajima", "note": "temple"}, {"t": "Mt. Misen Ropeway (Miyajima)", "u": "https://www.google.com/maps/search/?api=1&query=Mount%20Misen%20Ropeway%20Miyajima", "note": "recheck status before trip"}], "restaurants": [{"t": "Okonomimura", "u": "https://www.google.com/maps/search/?api=1&query=Okonomimura%20Hiroshima", "note": "okonomiyaki stalls"}, {"t": "Miyajima omotesando stalls", "u": "https://www.google.com/maps/search/?api=1&query=Omotesando%20Shopping%20Street%20Miyajima", "note": "oysters, anago"}]}], "restaurants": [{"city": "Tokyo", "rows": [{"cat": "Breakfast", "rec": "Tsukiji Outer Market stalls; hotel", "price": "¥–¥¥"}, {"cat": "Dinner", "rec": "Sushi Fujioka (booked, Oct 15)", "price": "¥¥¥¥"}, {"cat": "Casual", "rec": "Ginza / Shinagawa Station restaurants", "price": "¥¥"}]}, {"city": "Yokkaichi", "rows": [{"cat": "All meals", "rec": "Casual, near Miyako Hotel Yokkaichi", "price": "¥–¥¥"}]}, {"city": "Yunoyama", "rows": [{"cat": "Dinner", "rec": "Shikanoyu Kaiseki (included with ryokan plan)", "price": "included"}]}, {"city": "Kyoto", "rows": [{"cat": "Breakfast/Snacks", "rec": "Nishiki Market stalls", "price": "¥"}, {"cat": "Lunch", "rec": "Yudofu near Nanzen-ji (Junsei, Okutan); Arashiyama cafes", "price": "¥¥"}, {"cat": "Dinner", "rec": "Pontocho / Kiyamachi; Gion Fukushi (booked, Oct 23)", "price": "¥¥–¥¥¥¥"}]}, {"city": "Hiroshima", "rows": [{"cat": "Dinner", "rec": "Okonomimura (okonomiyaki stalls)", "price": "¥¥"}, {"cat": "Miyajima lunch", "rec": "Grilled oysters, anago, momiji manju on omotesando", "price": "¥¥"}]}], "foods": [{"country": "Tokyo", "items": [{"name": "Tamagoyaki", "desc": "Sweet-savory rolled omelet, sold warm off skewers at Tsukiji."}, {"name": "Fresh sashimi & uni", "desc": "By the piece or cup at Tsukiji Outer Market's seafood stalls."}, {"name": "Edomae sushi", "desc": "Tokyo's classic sushi style — the reason Sushi Fujioka is on the books."}]}, {"country": "Mie / Yokkaichi & Yunoyama", "items": [{"name": "Ise-Mizusawa Beef", "desc": "A prized local wagyu, served teppanyaki-style as part of the Shikanoyu ryokan dinner."}, {"name": "Tontoro / Yokkaichi tonteki", "desc": "Yokkaichi's local specialty — thick-cut pork steak, garlic-seared, a regional B-grade gourmet favorite."}]}, {"country": "Kyoto", "items": [{"name": "Yudofu", "desc": "Simmered hot tofu, perfected around the Zen temples of Nanzen-ji — light, delicate, multi-course."}, {"name": "Yuba (tofu skin)", "desc": "A Kyoto delicacy, sold fresh at Nishiki Market and used throughout kaiseki cuisine."}, {"name": "Kyoto-style tsukemono", "desc": "Elaborate pickled vegetables — Nishiki Market is lined with shops offering samples."}]}, {"country": "Hiroshima & Miyajima", "items": [{"name": "Hiroshima-style okonomiyaki", "desc": "Layered (not mixed) with cabbage, pork, noodles and a fried egg — try Okonomimura for variety."}, {"name": "Grilled oysters", "desc": "Miyajima is one of Japan's top oyster regions — grilled to order along omotesando."}, {"name": "Anago (conger eel)", "desc": "Simmered or grilled over rice, Miyajima's other signature dish."}, {"name": "Momiji manju", "desc": "Maple-leaf-shaped cakes with sweet bean, custard or chocolate filling — the classic Miyajima souvenir sweet."}]}], "transport": {"tables": [{"name": "Rail Plan (point-to-point, no nationwide JR Pass)", "tables": [[["Date", "Segment", "Plan"], ["10/16", "Tokyo → Nagoya", "Nozomi, Ordinary Reserved"], ["10/16", "Nagoya → Yokkaichi", "Kintetsu Limited Express preferred"], ["10/20", "Yokkaichi → Yunoyama", "Day-of, local train"], ["10/21", "Yunoyama → Yokkaichi → Nagoya", "Kintetsu"], ["10/21", "Nagoya → Kyoto", "Shinkansen, Ordinary Reserved"], ["10/24", "Kyoto → Hiroshima", "Direct Nozomi, Ordinary Reserved"], ["10/26", "Hiroshima → Shinagawa", "Direct Nozomi, Ordinary Reserved by default"], ["10/27", "Shinagawa → HND", "Day-of local rail"]]], "bullets": ["Exact trains remain intentionally unselected until the actual October timetable and seat maps are available."]}, {"name": "Rail Booking Targets", "tables": [[["Date", "Action"], ["9/16", "Book 10/16 rail (Tokyo → Nagoya → Yokkaichi)"], ["9/21", "Book 10/21 rail (Yunoyama → Nagoya → Kyoto)"], ["9/24", "Book 10/24 rail (Kyoto → Hiroshima)"], ["9/26", "Book 10/26 rail (Hiroshima → Shinagawa)"]]], "bullets": []}, {"name": "Local & Miyajima", "tables": [], "bullets": ["Miyajima: JR Sanyo Line to Miyajimaguchi, then the JR or Miyajima Matsudai ferry (~10 min) — target arrival ~8:15–8:30 AM on Oct 25.", "Arashiyama: Randen (Keifuku) tram or JR Sagano Line, ~20–25 min each way from central Kyoto.", "IC cards (Suica/Pasmo) work nationwide on trains, subways and buses — top up at any station."]}], "notes": [{"title": "No JR Pass this trip", "body": "This itinerary uses point-to-point tickets rather than a nationwide JR Pass — book each Shinkansen leg by the target dates above once the October timetable opens."}], "bullets": []}, "packing": [{"title": "🎒  Carry-on", "items": ["Passports + photo copies", "Wallet, cards, some yen cash", "Phone + charger + power bank", "IC card (Suica/Pasmo) or a way to buy one on arrival", "Medications (in original packaging)", "Change of clothes + toothbrush for the overnight flight", "This guide + offline maps downloaded", "Snacks for the flight"]}, {"title": "🧳  Checked / Forwarded Bag", "items": ["Comfortable walking shoes (broken in — Oct 22 is a ~9–10 km day)", "Layers: light jacket for cooler mountain evenings (Yunoyama, Miyajima)", "Rain shell / compact umbrella", "Dressier outfit for Sushi Fujioka and Gion Fukushi", "Yukata is provided at the ryokan — no need to pack one", "Toiletries (travel sizes)", "Reusable tote for market shopping"]}, {"title": "🚚  Luggage Forwarding (Takkyubin)", "items": ["Oct 19 — pack the large suitcase for forwarding: Miyako Hotel Yokkaichi → Cross Hotel Kyoto (delivery requested 10/20)", "Label with the exact reservation name and check-in date 10/21/2026", "Oct 23 — pack it again: Cross Hotel Kyoto → Shinagawa Prince Hotel Main Tower Front Desk (delivery requested 10/26)", "Label with the exact reservation name, stay date 10/26/2026, 'Main Tower', and contact info", "Keep both takkyubin receipts until the suitcase is physically back in hand at Shinagawa", "Carry-on/overnight bag only for Yunoyama (Oct 20–21) and carry-ons only for Kyoto → Hiroshima → Tokyo (Oct 23–26)"]}, {"title": "🏨  Hotel Departure (every checkout)", "items": ["Chargers + adapters from the outlets", "Safe emptied (passports, valuables)", "Bathroom + closet + drawers checked", "Under the bed & nightstands", "Settle bill; keep receipts", "Confirm next train time"]}, {"title": "🌍  International Travel", "items": ["Notify bank/card of travel dates", "Check passport validity (6+ months)", "Travel insurance details saved offline", "Download offline maps for each city", "Confirm all rail reservations 1–2 weeks before departure", "Recheck Miyajima Ropeway operating/reservation status", "Recheck Gozaisho Ropeway operating schedule", "Review weather for the full trip"]}], "emergency": {"numbers": [{"country": "Japan", "general": "110 (police) / 119 (fire/ambulance)", "police": "110", "amb": "119"}], "hospitals": [{"city": "Tokyo", "hospital": "St. Luke's International Hospital, 9-1 Akashicho, Chuo-ku", "embassy": "U.S. Embassy Tokyo: 1-10-5 Akasaka, Minato-ku, +81 3 3224 5000"}, {"city": "Yokkaichi / Yunoyama", "hospital": "Yokkaichi Municipal Hospital, 2-2-37 Shibata, Yokkaichi", "embassy": "U.S. Embassy Tokyo (nearest): +81 3 3224 5000"}, {"city": "Kyoto", "hospital": "Japanese Red Cross Kyoto Daiichi Hospital, 15-749 Honmachi, Higashiyama-ku", "embassy": "U.S. Consulate Osaka-Kobe: 2-11-5 Nishitenma, Osaka, +81 6 6315 5900"}, {"city": "Hiroshima", "hospital": "Hiroshima City Hospital, 7-33 Motomachi, Naka-ku", "embassy": "U.S. Consulate Osaka-Kobe (nearest): +81 6 6315 5900"}], "money": [{"k": "💴  Currency", "v": "Japanese Yen (¥). Cards are widely accepted in cities, but carry cash for the ryokan, small restaurants, temples, and rural Yunoyama/Miyajima stalls."}, {"k": "💵  Tipping", "v": "Not customary anywhere in Japan, including restaurants, taxis and the ryokan — service charges are already included."}, {"k": "🏧  ATMs", "v": "7-Eleven (Seven Bank) ATMs reliably accept foreign cards nationwide, even in smaller towns like Yokkaichi."}, {"k": "🔌  Power", "v": "100V, Type A/B plugs (same as North America) — no adapter needed for US plugs, but pack a converter if bringing 220–240V devices."}, {"k": "🎫  IC cards", "v": "Suica or Pasmo cover trains, subways, buses and konbini purchases nationwide — buy at any major station and top up as needed."}]}};
+
+/* ====================== LEG / COUNTRY MAP ====================== */
+const LEGS = {
+  transit:{name:"In transit", flag:"✈", color:"#7A6A52"},
+  tokyo:{name:"Tokyo", flag:"🗼", color:"#A8423C"},
+  yokkaichi:{name:"Yokkaichi", flag:"🏮", color:"#3E6B8C"},
+  yunoyama:{name:"Yunoyama", flag:"♨️", color:"#6B4F8C"},
+  kyoto:{name:"Kyoto", flag:"⛩️", color:"#B8893E"},
+  hiroshima:{name:"Hiroshima", flag:"🕊️", color:"#2F6B4F"},
+};
+const DAY_LEG = {1:"tokyo",2:"tokyo",3:"yokkaichi",4:"yokkaichi",5:"yokkaichi",6:"yokkaichi",7:"yunoyama",8:"kyoto",9:"kyoto",10:"kyoto",11:"hiroshima",12:"hiroshima",13:"tokyo",14:"tokyo"};
+
+/* ====================== STORAGE (safe) ====================== */
+const store = {
+  ok:true,
+  get(k,f){ try{const v=localStorage.getItem(k);return v==null?f:JSON.parse(v);}catch(e){this.ok=false;return (this._m&&this._m[k])??f;} },
+  set(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){this.ok=false;(this._m=this._m||{})[k]=v;} },
+  _m:{}
+};
+
+/* ====================== HELPERS ====================== */
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tel = s => "tel:"+String(s).replace(/[^0-9+]/g,"");
+function legOfDay(n){ return LEGS[DAY_LEG[n]||"transit"]; }
+function setAccent(color){
+  document.documentElement.style.setProperty("--accent",color);
+  document.documentElement.style.setProperty("--accent-tint","color-mix(in srgb,"+color+" 16%, #FAF6EE)");
+  const m=document.querySelector('meta[name=theme-color]'); if(m) m.content="#0E2A33";
+}
+function setLegPill(leg){
+  $("#legFlag").textContent=leg.flag; $("#legName").textContent=leg.name;
+}
+/* trip-day logic */
+function tripDayNumber(now=new Date()){
+  const [sy,sm,sd]=DATA.meta.tripStart.split("-").map(Number), [ey,em,ed]=DATA.meta.tripEnd.split("-").map(Number);
+  const start=new Date(sy,sm-1,sd), end=new Date(ey,em-1,ed);
+  const d0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  if(d0<start) return {state:"before", n:1, days:Math.round((start-d0)/864e5)};
+  if(d0>end)   return {state:"after",  n:DATA.days.length};
+  return {state:"during", n:Math.round((d0-start)/864e5)+1};
+}
+const ICON = {
+  walk:'🚶', train:'🚆', weather:'🌤️', photo:'📷', coffee:'☕', rain:'☔', wc:'🚻', bag:'🧳',
+};
+
+/* ====================== ROUTER ====================== */
+const state = {tab:"today", day:null, shopList:"drugstore", listMode:"pack"};
+function go(tab,opts={}){ state.tab=tab; if('day' in opts)state.day=opts.day; render(); window.scrollTo({top:0}); }
+
+const SHOPPING={"lists": [{"id": "drugstore", "label": "Drugstore & Beauty", "flag": "💊", "accent": "#A8423C", "note": "Tokyo/Kyoto drugstores (Matsumoto Kiyoshi, Don Quijote) carry all of these — one stop covers the list", "tiers": [{"title": "⭐ Must", "items": [{"n": "Hada Labo Gokujyun Lotion", "p": "¥800–1,200", "d": "Cult hyaluronic-acid toner — the everyday staple of Japanese skincare."}, {"n": "Biore UV Aqua Rich Watery Essence SPF50+", "p": "¥800–1,000", "d": "Famously light, fast-absorbing sunscreen — a repeat-buy favorite for travelers."}, {"n": "SHISEIDO Ultimune Power Infusing Concentrate", "p": "¥6,000–9,000", "d": "Prestige serum, meaningfully cheaper in Japan than overseas duty."}, {"n": "Kobayashi Sekken Sarasara Foot Sheets", "p": "¥500–800", "d": "Cooling foot sheets — a lifesaver after the long Kyoto walking day."}]}, {"title": "👍 Recommended", "items": [{"n": "EVE Quick Headache Tablets", "p": "¥600–900", "d": "A well-known Japanese OTC pain reliever, handy to have on hand."}, {"n": "Sata Andagi / Kanebo lip balm", "p": "¥1,000–2,000", "d": "Popular Japanese lip care — nice small gifts."}, {"n": "Kao Megrhythm Steam Eye Mask", "p": "¥800–1,200", "d": "Disposable heated eye masks — great for the flight home."}]}, {"title": "🧴 Bath & Body", "items": [{"n": "Bathclin Onsen Bath Salts (assorted)", "p": "¥400–800", "d": "Recreate a ryokan-style bath at home; light, easy to pack."}, {"n": "Kracie / Naive shampoo & conditioner", "p": "¥600–1,000 ea", "d": "Popular, gentle everyday hair care."}]}]}, {"id": "snacks", "label": "Snacks & Grocery", "flag": "🍬", "accent": "#C08A2E", "note": "Any konbini (7-Eleven, Lawson, FamilyMart) or a depachika basement grocery covers most of this", "tiers": [{"title": "🍫 Kit Kat & Chocolate", "items": [{"n": "Matcha Kit Kat", "p": "¥300–500/bag", "d": "The classic Japan-exclusive flavor — reliably available, a safe gift."}, {"n": "Regional Kit Kat flavors", "p": "¥300–600/bag", "d": "Look for region-limited flavors in station gift shops — Tokyo Banana Kit Kat is a fun crossover."}, {"n": "Royce' Nama Chocolate", "p": "¥800–1,500", "d": "Melt-in-the-mouth chocolate, sold chilled — a genuine step up from typical souvenir chocolate."}]}, {"title": "🍘 Savory Snacks", "items": [{"n": "Calbee Jagariko / Potato sticks", "p": "¥150–250", "d": "Crunchy potato-stick snacks in fun flavors, sold everywhere."}, {"n": "Assorted rice crackers (senbei)", "p": "¥300–800", "d": "Nishiki Market and depachika basements have excellent fresh senbei."}, {"n": "Tokyo Banana", "p": "¥1,000–1,500/box", "d": "Tokyo's classic banana-cream sponge cake souvenir."}]}, {"title": "🍵 Tea & Pantry", "items": [{"n": "Kyoto matcha (Uji)", "p": "¥1,000–3,000", "d": "Uji, just south of Kyoto, is Japan's most famous matcha region — look for it at Nishiki Market or a dedicated tea shop."}, {"n": "Instant ramen (regional varieties)", "p": "¥150–400 ea", "d": "Konbini and grocery stores carry region-specific instant ramen not sold abroad."}]}]}, {"id": "kyoto", "label": "Kyoto Crafts", "flag": "⛩️", "accent": "#8C6B3E", "note": "Nishiki Market, Teramachi/Shinkyogoku arcades, and shops around Kiyomizu-dera and Arashiyama", "tiers": [{"title": "🏺 Craft", "items": [{"n": "Kiyomizu-yaki pottery", "p": "¥1,500–8,000", "d": "Kyoto's signature ceramic ware — small pieces (cups, small bowls) travel well; shops line the Kiyomizu-dera approach."}, {"n": "Folding fan (sensu)", "p": "¥1,500–5,000", "d": "Traditional Kyoto fans, sold in Teramachi/Shinkyogoku and near Gion — practical and a lasting souvenir."}, {"n": "Yuzen-dyed accessories", "p": "¥1,000–4,000", "d": "Hand-dyed silk goods (pouches, scarves) using Kyoto's traditional yuzen technique."}]}, {"title": "🍡 Edible", "items": [{"n": "Yatsuhashi (cinnamon rice-flour sweets)", "p": "¥600–1,200/box", "d": "Kyoto's signature sweet, sold fresh (raw, nama) or baked (crisp) — Nishiki Market and station shops both carry it."}, {"n": "Yuba (tofu skin), packaged", "p": "¥500–1,500", "d": "Dried yuba packs well and is a distinctly Kyoto ingredient to bring home."}]}]}, {"id": "hiroshima", "label": "Hiroshima & Miyajima", "flag": "🕊️", "accent": "#2F6B4F", "note": "Omotesando shopping street on Miyajima, and Hondori in central Hiroshima", "tiers": [{"title": "🍁 Miyajima Classics", "items": [{"n": "Momiji manju (assorted fillings)", "p": "¥600–1,200/box", "d": "Maple-leaf cakes with sweet bean, custard or chocolate filling — sold fresh along omotesando, some grilled to order."}, {"n": "Shakushi (rice paddle)", "p": "¥500–3,000", "d": "Miyajima is the traditional home of the wooden rice paddle — small decorative ones make an easy, packable souvenir."}]}, {"title": "🎋 Hiroshima", "items": [{"n": "Kumano fude (calligraphy/makeup brushes)", "p": "¥1,000–10,000+", "d": "Kumano, near Hiroshima, produces Japan's finest handmade brushes — cosmetic brushes are a popular, more affordable entry point."}, {"n": "Otafuku okonomiyaki sauce", "p": "¥400–800", "d": "The signature sauce behind Hiroshima-style okonomiyaki — bring a bottle home to recreate it."}]}]}]};
+const TABS=[
+  {id:"today",label:"Today",svg:'<path d="M12 3l8 7h-2v9h-5v-6h-2v6H6v-9H4z"/>'},
+  {id:"days",label:"Days",svg:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/>'},
+  {id:"places",label:"Places",svg:'<path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>'},
+  {id:"lists",label:"Lists",svg:'<path d="M8 6h11M8 12h11M8 18h11"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'},
+  {id:"info",label:"Info",svg:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/>'},
+];
+function renderTabs(){
+  const bar=$("#tabbar"); bar.innerHTML="";
+  TABS.forEach(t=>{
+    const b=document.createElement("button");
+    b.className="tab"+(state.tab===t.id?" active":"");
+    b.innerHTML='<svg viewBox="0 0 24 24" class="ti">'+t.svg+'</svg><span class="tl">'+t.label+'</span>';
+    b.onclick=()=>{ if(t.id==="days"){state.day=null;} go(t.id); };
+    bar.appendChild(b);
+  });
+}
+
+/* ====================== COMPONENTS ====================== */
+function calloutHTML(c){
+  return '<div class="callout"><div class="bar"></div><div><div class="ttl">'+esc(c.title)+'</div>'+
+    (c.body?'<div class="bd">'+esc(c.body)+'</div>':'')+'</div></div>';
+}
+function quickFacts(d){
+  let cells="";
+  if(d.walking) cells+='<div><div class="k">On foot</div><div class="v">'+esc(d.walking)+'</div></div>';
+  if(d.transport) cells+='<div><div class="k">Transport</div><div class="v">'+esc(d.transport)+'</div></div>';
+  return cells?'<div class="quick">'+cells+'</div>':"";
+}
+
+/* ====================== VIEW: TODAY ====================== */
+function viewToday(){
+  const t=tripDayNumber();
+  const n=t.n, d=DATA.days[n-1], leg=legOfDay(n);
+  setAccent(leg.color); setLegPill(leg);
+  let status, road=esc(d.subtitle);
+  if(t.state==="before"){ status='<span class="blink"></span> '+t.days+' day'+(t.days===1?'':'s')+' to departure'; }
+  else if(t.state==="after"){ status='<span class="blink"></span> Trip complete · safe travels home'; }
+  else { status='<span class="blink"></span> Day '+n+' of '+DATA.days.length+' · live'; }
+
+  let callouts = (d.callouts||[]).map(calloutHTML).join("");
+
+  // schedule
+  let tt = d.schedule.map(r=>'<div class="tt-row"><div class="tt-time">'+esc(r.time)+'</div><div class="tt-plan">'+esc(r.plan)+'</div></div>').join("");
+
+  let html='<section class="view">';
+  html+='<div class="board"><div class="inner">'+
+    '<div class="status">'+status+'</div>'+
+    '<div class="bigdate">'+esc(d.weekday)+', '+esc(d.date)+'</div>'+
+    '<h1>'+esc(d.headline)+'</h1>'+
+    (road?'<div class="road">'+road+'</div>':'')+
+    '<div class="legrow"><span class="tag"><span class="ic">'+leg.flag+'</span>'+esc(leg.name)+'</span>'+
+      (d.weather?'<span class="tag"><span class="ic">'+ICON.weather+'</span>'+esc(d.weather)+'</span>':'')+'</div>'+
+    quickFacts(d)+
+    '<div class="flipgo"><button class="btn primary" onclick="go(\'days\',{day:'+n+'})">Open full day →</button>'+
+      (t.state==="before"?'<button class="btn ghost" onclick="go(\'pack\')">Packing</button>':'')+'</div>'+
+    '</div></div>';
+
+  if(t.state==="before"){
+    html+='<div class="section-head"><div class="eyebrow">Before you fly</div><div class="h-section">Get set</div></div>';
+    html+='<div class="card pad note-soft">Your trip runs <b>October 14–27, 2026</b>: Tokyo (Ginza) → Yokkaichi &amp; Yunoyama → Kyoto → Hiroshima &amp; Miyajima → Tokyo (Shinagawa). Tap <b>Days</b> to preview any day, <b>Lists</b> to tick off packing and shopping, and <b>Info</b> for emergency numbers and money tips. Everything works offline once this page has loaded — add it to your home screen.</div>';
+    if(DATA.glance.key && DATA.glance.key.length){
+      html+='<div class="section-head"><div class="eyebrow">Locked in</div><div class="h-section">Confirmed</div></div><div class="card pad"><div class="gk">'+
+        DATA.glance.key.map(k=>'<div class="gk-v" style="margin-top:0">• '+esc(k.replace(/\.$/,''))+'</div>').join("")+'</div></div>';
+    }
+  } else {
+    if(callouts){ html+='<div class="section-head"><div class="eyebrow">Heads up</div><div class="h-section">Don’t miss</div></div>'+callouts; }
+    html+='<div class="section-head"><div class="eyebrow">Departure board</div><div class="h-section">Today’s plan</div></div>';
+    html+='<div class="card pad"><div class="timetable">'+(tt||'<div class="note-soft">A relaxed, unscheduled day.</div>')+'</div></div>';
+    html+='<div class="flipgo" style="margin-top:14px"><button class="btn primary block" onclick="go(\'days\',{day:'+n+'})">See walking tour, dining &amp; tips →</button></div>';
+  }
+  html+='</section>';
+  return html;
+}
+
+/* ====================== VIEW: DAYS (list + detail) ====================== */
+function viewDays(){
+  if(state.day){ return viewDayDetail(state.day); }
+  const todayN=tripDayNumber().n, tstate=tripDayNumber().state;
+  setAccent(LEGS.transit.color); setLegPill(LEGS.transit);
+  let html='<section class="view"><div class="section-head"><div class="eyebrow">13 nights · 5 stops</div><div class="h-section">The itinerary</div><div class="sub">October 14–27, 2026. Tap a day for its hour-by-hour plan, self-guided walk and dining.</div></div>';
+  DATA.days.forEach(d=>{
+    const leg=legOfDay(d.n);
+    const isToday=(tstate==="during"&&d.n===todayN);
+    html+='<a class="card daycard" href="#" onclick="go(\'days\',{day:'+d.n+'});return false" style="--accent:'+leg.color+'">'+
+      '<span class="stripe"></span><div class="dc-in">'+
+      '<div class="dc-top"><span class="dnum">DAY '+d.n+'</span><span class="ddate">'+esc(d.short)+'</span>'+
+        (isToday?'<span class="today-badge">Today</span>':'')+'<span style="margin-left:auto">'+leg.flag+'</span></div>'+
+      '<div class="dhead">'+esc(d.headline)+'</div>'+
+      (d.subtitle?'<div class="dsub">'+esc(d.subtitle)+'</div>':'')+
+      '</div><div class="chev">›</div></a>';
+  });
+  html+='</section>';
+  return html;
+}
+
+function viewDayDetail(n){
+  const d=DATA.days[n-1], leg=legOfDay(n);
+  setAccent(leg.color); setLegPill(leg);
+  const prev=n>1?n-1:null, next=n<DATA.days.length?n+1:null;
+  let html='<section class="view">';
+  html+='<div class="detail-bar"><button class="backbtn" onclick="go(\'days\',{day:null})">‹ All days</button>'+
+    '<div class="dstep"><button onclick="go(\'days\',{day:'+prev+'})" '+(prev?'':'disabled')+'>‹</button>'+
+    '<button onclick="go(\'days\',{day:'+next+'})" '+(next?'':'disabled')+'>›</button></div></div>';
+
+  // header card
+  html+='<div class="card pad" style="border-top:4px solid var(--accent)">'+
+    '<div class="dc-top" style="display:flex;align-items:center;gap:8px"><span class="dnum">DAY '+n+'</span>'+
+      '<span class="ddate">'+esc(d.weekday)+', '+esc(d.date)+'</span><span style="margin-left:auto;font-size:18px">'+leg.flag+'</span></div>'+
+    '<h1 style="font-family:var(--serif);font-size:24px;font-weight:600;margin:9px 0 0;line-height:1.15">'+esc(d.headline)+'</h1>'+
+    (d.subtitle?'<div class="sub" style="margin-top:6px">'+esc(d.subtitle)+'</div>':'')+
+    (d.overview?'<p style="font-size:14px;line-height:1.6;margin:12px 0 0;color:var(--ink)">'+esc(d.overview)+'</p>':'')+
+    '<div class="legrow" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+
+      (d.weather?'<span class="chip flat">'+ICON.weather+' '+esc(d.weather)+'</span>':'')+
+      (d.walking?'<span class="chip flat">'+ICON.walk+' '+esc(d.walking)+'</span>':'')+
+      (d.transport?'<span class="chip flat">'+ICON.train+' '+esc(d.transport)+'</span>':'')+
+    '</div></div>';
+
+  // callouts
+  (d.callouts||[]).forEach(c=>{ html+=calloutHTML(c); });
+
+  // schedule
+  if(d.schedule.length){
+    html+='<div class="section-head"><div class="eyebrow">Departure board</div><div class="h-section">Hour by hour</div></div>';
+    html+='<div class="card pad"><div class="timetable">'+
+      d.schedule.map(r=>'<div class="tt-row"><div class="tt-time">'+esc(r.time)+'</div><div class="tt-plan">'+esc(r.plan)+'</div></div>').join("")+
+      '</div></div>';
+  }
+
+  // walking tour
+  if(d.tour && d.tour.stops.length){
+    html+='<div class="section-head"><div class="eyebrow">Self-guided · '+d.tour.stops.filter(s=>!s.transit).length+' stops</div><div class="h-section">Walking tour</div>'+
+      (d.tour.intro?'<div class="sub">'+esc(d.tour.intro)+'</div>':'')+'</div>';
+    html+='<div class="card">';
+    let stopNo=0;
+    d.tour.stops.forEach((s,i)=>{
+      if(s.transit){
+        html+='<div class="leg"><div class="leg-ic">🚆</div><div class="leg-body">'+
+          '<div class="leg-name">'+esc(s.name)+'</div>'+
+          (s.desc?'<div class="leg-desc">'+esc(s.desc)+'</div>':'')+
+          (s.url?'<div style="margin-top:8px"><a class="maplink" target="_blank" rel="noopener" href="'+esc(s.url)+'">📍 Open in Maps</a></div>':'')+
+        '</div></div>';
+        return;
+      }
+      stopNo++;
+      const seenKey="seen:"+n+":"+i, seen=store.get(seenKey,false);
+      html+='<div class="stop'+(seen?' seen':'')+'"><div class="num">'+stopNo+'</div><div class="body">'+
+        '<div class="name">'+esc(s.name)+'</div>'+
+        (s.desc?'<div class="desc">'+esc(s.desc)+'</div>':'')+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">'+
+          (s.url?'<a class="maplink" target="_blank" rel="noopener" href="'+esc(s.url)+'">📍 Open in Maps</a>':'')+
+          '<button class="seentog'+(seen?' on':'')+'" data-k="'+seenKey+'" onclick="toggleSeen(this)"><span class="sbox">✓</span>Seen</button>'+
+        '</div>'+
+        (s.address?'<div class="note-soft" style="margin-top:7px">'+esc(s.address)+'</div>':'')+
+      '</div></div>';
+    });
+    html+='</div>';
+  }
+
+  // eat
+  if(d.eat.length){
+    html+='<div class="section-head"><div class="eyebrow">Breakfast to nightcap</div><div class="h-section">Where to eat</div></div><div class="card pad">';
+    d.eat.forEach(e=>{ html+='<div class="eat-row"><div class="eat-cat">'+esc(e.cat)+'</div><div class="eat-rec">'+esc(e.rec)+'</div>'+
+      (e.notes?'<div class="eat-note">'+esc(e.notes)+'</div>':'')+'</div>'; });
+    html+='</div>';
+  }
+
+  // foods
+  if(d.foods.length){
+    html+='<div class="section-head"><div class="eyebrow">Order this</div><div class="h-section">Taste today</div></div><div class="card pad"><div class="foodlist">'+
+      d.foods.map(f=>'<div class="food"><div class="fn">'+esc(f.name)+'</div><div class="fd">'+esc(f.desc)+'</div></div>').join("")+'</div></div>';
+  }
+
+  // good to know
+  const g=d.good||{};
+  const gkmap=[["photo","📷 Photo spots"],["coffee","☕ Coffee"],["restrooms","🚻 Restrooms"],["rainy","☔ Rainy backup"],["packing","🧳 Day-bag reminder"]];
+  const gkrows=gkmap.filter(([k])=>g[k]).map(([k,lab])=>'<div><div class="gk-k">'+lab+'</div><div class="gk-v">'+esc(g[k])+'</div></div>');
+  if(gkrows.length){
+    html+='<div class="section-head"><div class="eyebrow">Good to know</div><div class="h-section">On the ground</div></div><div class="card pad"><div class="gk">'+gkrows.join("")+'</div></div>';
+  }
+
+  // notes
+  const key="note:day:"+n;
+  html+='<div class="section-head"><div class="eyebrow">Your day</div><div class="h-section">Notes</div></div>'+
+    '<textarea class="notes" placeholder="Reservations, table times, memories…" oninput="store.set(\''+key+'\',this.value)">'+esc(store.get(key,""))+'</textarea>';
+
+  // bottom nav
+  html+='<div class="flipgo" style="margin-top:18px">'+
+    (prev?'<button class="btn ghost" style="--accent:'+leg.color+';background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="go(\'days\',{day:'+prev+'})">‹ Day '+prev+'</button>':'')+
+    (next?'<button class="btn primary block" onclick="go(\'days\',{day:'+next+'})">Day '+next+' →</button>':'<button class="btn ghost block" style="background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="go(\'days\',{day:null})">Back to all days</button>')+
+  '</div>';
+
+  html+='</section>';
+  return html;
+}
+
+/* ====================== VIEW: PLACES ====================== */
+const CITY_LEG = {"Tokyo":"tokyo","Yokkaichi":"yokkaichi","Yunoyama":"yunoyama","Kyoto":"kyoto","Hiroshima":"hiroshima"};
+const FOODS_BY_LEG = {tokyo:"Tokyo",yokkaichi:"Mie / Yokkaichi & Yunoyama",yunoyama:"Mie / Yokkaichi & Yunoyama",kyoto:"Kyoto",hiroshima:"Hiroshima & Miyajima"};
+function viewPlaces(){
+  setAccent(LEGS.tokyo.color); setLegPill({name:"All places",flag:"🗺️"});
+  let html='<section class="view"><div class="section-head"><div class="eyebrow">Tap anything to navigate</div><div class="h-section">Places &amp; maps</div><div class="sub">Hotels, stations, sights and tables — every name opens in Google Maps.</div></div>';
+
+  // Hotels
+  html+='<div class="minihead" style="margin:18px 4px 8px">Your hotels</div>';
+  DATA.hotels.forEach(h=>{
+    html+='<div class="card pad" style="margin-bottom:10px"><div style="font-family:var(--serif);font-size:16px;font-weight:600;line-height:1.2">'+esc(h.name)+'</div>'+
+      (h.notes?'<div class="note-soft" style="margin-top:5px">'+esc(h.notes)+'</div>':'')+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px">'+
+        (h.mapUrl?'<a class="maplink" target="_blank" rel="noopener" href="'+esc(h.mapUrl)+'">📍 '+esc(h.address)+'</a>':'')+
+        (h.phone?'<a class="maplink" href="'+tel(h.phone)+'">☎ Call</a>':'')+
+      '</div></div>';
+  });
+
+  // Cities accordions
+  html+='<div class="minihead" style="margin:22px 4px 8px">By city</div>';
+  DATA.cities.forEach((c,i)=>{
+    const legkey=CITY_LEG[c.city]||"tokyo", leg=LEGS[legkey];
+    html+='<details class="acc" style="--accent:'+leg.color+'"'+(i===0?'':'')+'>'+
+      '<summary><span class="city-flag">'+leg.flag+'</span><div><div class="city-name">'+esc(c.city)+'</div>'+
+        '<div class="city-meta">'+c.attractions.length+' sights · '+c.restaurants.length+' eats</div></div><span class="mk">›</span></summary>'+
+      '<div class="acc-body">';
+    // quick links
+    if(c.links.length){
+      html+='<div class="linkchips">'+c.links.map(l=> l.u
+          ?'<a class="chip" target="_blank" rel="noopener" href="'+esc(l.u)+'">'+(l.label==="Hotel"?"🏨":l.label==="Station"?"🚆":"📍")+' '+esc(l.label)+'</a>'
+          :'<span class="chip flat">🚗 '+esc(l.t||l.label)+'</span>'
+        ).join("")+'</div>';
+    }
+    if(c.attractions.length){
+      html+='<div class="minihead">★ Attractions</div>';
+      c.attractions.forEach(a=>{ html+='<a class="linkrow" target="_blank" rel="noopener" href="'+esc(a.u||'#')+'"><div><div class="lr-name">'+esc(a.t)+'</div>'+(a.note?'<div class="lr-note">'+esc(a.note)+'</div>':'')+'</div><span class="lr-go">Map ↗</span></a>'; });
+    }
+    if(c.restaurants.length){
+      html+='<div class="minihead">🍴 Eat &amp; drink</div>';
+      c.restaurants.forEach(a=>{ html+='<a class="linkrow" target="_blank" rel="noopener" href="'+esc(a.u||'#')+'"><div><div class="lr-name">'+esc(a.t)+'</div>'+(a.note?'<div class="lr-note">'+esc(a.note)+'</div>':'')+'</div><span class="lr-go">Map ↗</span></a>'; });
+    }
+    // local foods for the country
+    const fc=DATA.foods.find(f=>f.country===FOODS_BY_LEG[legkey]);
+    if(fc){
+      html+='<div class="minihead">🍽️ Local specialties</div><div class="foodlist">'+
+        fc.items.map(f=>'<div class="food"><div class="fn">'+esc(f.name)+'</div><div class="fd">'+esc(f.desc)+'</div></div>').join("")+'</div>';
+    }
+    html+='</div></details>';
+  });
+  html+='</section>';
+  return html;
+}
+
+/* ====================== VIEW: PACK ====================== */
+function packBody(){
+  let total=0,done=0;
+  DATA.packing.forEach((p,pi)=>p.items.forEach((_,ii)=>{ total++; if(store.get("pk:"+pi+":"+ii,false))done++; }));
+  let html='<div class="card pad" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:600;font-size:14px">Overall</span><span class="pricetag" id="pkOverall">'+done+' / '+total+'</span></div><div class="progress"><i id="pkBar" style="width:'+(total?Math.round(done/total*100):0)+'%"></i></div></div>';
+  DATA.packing.forEach((p,pi)=>{
+    let pdone=p.items.filter((_,ii)=>store.get("pk:"+pi+":"+ii,false)).length;
+    html+='<details class="acc" '+(pi===0?'open':'')+'><summary><div><div class="city-name" style="font-size:16px">'+esc(p.title)+'</div>'+
+      '<div class="city-meta" id="pkc'+pi+'">'+pdone+' of '+p.items.length+' packed</div></div><span class="mk">›</span></summary><div class="acc-body" style="padding-top:4px">';
+    p.items.forEach((it,ii)=>{
+      const on=store.get("pk:"+pi+":"+ii,false);
+      html+='<div class="check'+(on?' on':'')+'" data-pi="'+pi+'" data-ii="'+ii+'" onclick="togglePack(this)"><div class="box">✓</div><div class="lbl">'+esc(it)+'</div></div>';
+    });
+    html+='</div></details>';
+  });
+  html+='<button class="btn ghost block" style="margin-top:6px;background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="resetPack()">Reset all checklists</button>';
+  return html;
+}
+function recalcPack(){
+  let total=0,done=0;
+  DATA.packing.forEach((p,pi)=>{ let pd=0; p.items.forEach((_,ii)=>{ total++; const v=store.get("pk:"+pi+":"+ii,false); if(v){done++;pd++;} });
+    const c=$("#pkc"+pi); if(c)c.textContent=pd+" of "+p.items.length+" packed"; });
+  const b=$("#pkBar"), o=$("#pkOverall");
+  if(b)b.style.width=(total?Math.round(done/total*100):0)+"%";
+  if(o)o.textContent=done+" / "+total;
+}
+window.togglePack=function(el){
+  const pi=el.dataset.pi, ii=el.dataset.ii, key="pk:"+pi+":"+ii;
+  const v=!store.get(key,false); store.set(key,v); el.classList.toggle("on",v); recalcPack();
+};
+window.resetPack=function(){
+  if(!confirm("Uncheck every item on all packing lists?"))return;
+  DATA.packing.forEach((p,pi)=>p.items.forEach((_,ii)=>store.set("pk:"+pi+":"+ii,false)));
+  render();
+};
+
+/* ====================== VIEW: SHOP ====================== */
+function shopBody(){
+  const lists=SHOPPING.lists;
+  const cur=lists.find(l=>l.id===state.shopList)||lists[0];
+  let total=0,done=0;
+  cur.tiers.forEach((t,ti)=>t.items.forEach((_,ii)=>{ total++; if(store.get("buy:"+cur.id+":"+ti+":"+ii,false))done++; }));
+  let html='<div class="seg">';
+  lists.forEach(l=>{ html+='<button class="'+(l.id===cur.id?"on":"")+'" onclick="switchShop(\''+l.id+'\')">'+esc(l.label)+'</button>'; });
+  html+='</div>';
+  html+='<div class="note-soft" style="margin:-2px 0 12px">'+esc(cur.note)+'. Tap an item for price &amp; details.</div>';
+  html+='<div class="card pad" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:600;font-size:14px">'+esc(cur.label)+'</span><span class="pricetag" id="buyOverall">'+done+' / '+total+'</span></div><div class="progress"><i id="buyBar" style="width:'+(total?Math.round(done/total*100):0)+'%"></i></div></div>';
+  cur.tiers.forEach((t,ti)=>{
+    html+='<div class="tier-head">'+esc(t.title)+'</div>';
+    t.items.forEach((it,ii)=>{
+      const key="buy:"+cur.id+":"+ti+":"+ii, on=store.get(key,false);
+      html+='<div class="check'+(on?" on":"")+'" onclick="toggleDetails(this)"><div class="box" data-k="'+key+'" onclick="toggleBuy(this,event)">✓</div><div class="lbl">'+esc(it.n)+'</div><span class="mk">›</span></div>';
+      let det=''; if(it.p)det+='<span class="pricetag">'+esc(it.p)+'</span> ';
+      if(it.d)det+=esc(it.d);
+      if(it.s)det+=' <b>Shade:</b> '+esc(it.s);
+      html+='<div class="buydetails">'+det+'</div>';
+    });
+  });
+  html+='<div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary" id="copyBuyBtn" onclick="copyBuyList()">Copy list</button><button class="btn ghost" style="background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="resetBuy()">Reset this list</button></div>';
+  html+='<div class="note-soft" style="margin-top:10px">Prices are rough guides in Japanese yen (¥) and vary by store and size.</div>';
+  html+='<textarea id="buyBox" class="notes" readonly style="display:none;margin-top:10px;min-height:150px" onclick="this.select()"></textarea>';
+  return html;
+}
+function viewLists(){
+  const shop=SHOPPING.lists.find(l=>l.id===state.shopList)||SHOPPING.lists[0];
+  setAccent(state.listMode==="shop"?shop.accent:LEGS.transit.color);
+  setLegPill({name:"Lists",flag:"📝"});
+  let html='<section class="view"><div class="section-head"><div class="eyebrow">Tick off as you go</div><div class="h-section">Lists</div><div class="sub">Packing &amp; shopping, saved on this device.</div></div>';
+  html+='<div class="seg"><button class="'+(state.listMode==="pack"?"on":"")+'" onclick="switchListMode(\'pack\')">🧳 Packing</button><button class="'+(state.listMode==="shop"?"on":"")+'" onclick="switchListMode(\'shop\')">🛍️ Shopping</button></div>';
+  html+=(state.listMode==="shop")?shopBody():packBody();
+  html+='</section>';
+  return html;
+}
+window.switchListMode=function(m){ state.listMode=m; render(); window.scrollTo({top:0}); };
+window.toggleDetails=function(el){ el.classList.toggle("open"); };
+window.switchShop=function(id){ state.shopList=id; render(); window.scrollTo({top:0}); };
+window.toggleBuy=function(box,ev){ if(ev)ev.stopPropagation(); const k=box.dataset.k, v=!store.get(k,false); store.set(k,v); const row=box.closest(".check"); if(row)row.classList.toggle("on",v); recalcBuy(); };
+function recalcBuy(){
+  const cur=SHOPPING.lists.find(l=>l.id===state.shopList); if(!cur)return;
+  let total=0,done=0; cur.tiers.forEach((t,ti)=>t.items.forEach((_,ii)=>{ total++; if(store.get("buy:"+cur.id+":"+ti+":"+ii,false))done++; }));
+  const b=$("#buyBar"),o=$("#buyOverall"); if(b)b.style.width=(total?Math.round(done/total*100):0)+"%"; if(o)o.textContent=done+" / "+total;
+}
+window.resetBuy=function(){
+  const cur=SHOPPING.lists.find(l=>l.id===state.shopList); if(!cur)return;
+  if(!confirm("Uncheck every item on the "+cur.label+" list?"))return;
+  cur.tiers.forEach((t,ti)=>t.items.forEach((_,ii)=>store.set("buy:"+cur.id+":"+ti+":"+ii,false)));
+  render();
+};
+function buildBuyList(){
+  const cur=SHOPPING.lists.find(l=>l.id===state.shopList); if(!cur)return "";
+  let L=[cur.label+" — shopping list",""];
+  cur.tiers.forEach((t,ti)=>{ L.push(t.title); t.items.forEach((it,ii)=>{ const on=store.get("buy:"+cur.id+":"+ti+":"+ii,false); L.push("  ["+(on?"x":" ")+"] "+it); }); L.push(""); });
+  return L.join("\n");
+}
+window.copyBuyList=function(){
+  const txt=buildBuyList(), box=$("#buyBox");
+  const reveal=()=>{ if(box){ box.style.display="block"; box.value=txt; box.focus(); box.select(); } };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>{ const b=$("#copyBuyBtn"); if(b){ const o=b.textContent; b.textContent="Copied ✓"; setTimeout(()=>b.textContent=o,1600); } }).catch(reveal);
+  } else reveal();
+};
+
+/* ---- Seen check-offs + export ---- */
+window.toggleSeen=function(el){
+  const k=el.dataset.k, v=!store.get(k,false);
+  store.set(k,v); el.classList.toggle("on",v);
+  const stop=el.closest(".stop"); if(stop)stop.classList.toggle("seen",v);
+};
+function buildTripLog(){
+  const M=DATA.meta; let L=[], seenCount=0;
+  L.push(M.title+" — "+M.subtitle);
+  L.push(M.dates);
+  L.push("Places seen (exported "+new Date().toLocaleDateString()+")");
+  L.push("");
+  DATA.days.forEach(d=>{
+    const stops=(d.tour&&d.tour.stops)||[];
+    const seen=stops.filter((s,i)=>store.get("seen:"+d.n+":"+i,false));
+    const note=(store.get("note:day:"+d.n,"")||"").trim();
+    if(seen.length||note){
+      L.push("DAY "+d.n+" · "+d.short+" — "+d.headline);
+      seen.forEach(s=>{ L.push("  \u2713 "+s.name); seenCount++; });
+      if(note) L.push("  \u270e Notes: "+note.replace(/\n/g,"\n     "));
+      L.push("");
+    }
+  });
+  if(!seenCount && !L.some(x=>x.startsWith("  \u270e"))) L.push("(Nothing checked off yet — tap \u201cSeen\u201d on places as you visit them.)");
+  else L.splice(3,0,"Total places checked off: "+seenCount,"");
+  return L.join("\n");
+}
+window.exportTrip=function(mode){
+  const txt=buildTripLog(), box=$("#exportBox");
+  const reveal=()=>{ if(box){ box.style.display="block"; box.value=txt; box.focus(); box.select(); } };
+  if(mode==="show"){ reveal(); return; }
+  if(mode==="copy"){
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(()=>flashBtn("Copied \u2713")).catch(reveal);
+    } else reveal();
+    return;
+  }
+  if(mode==="download"){
+    try{
+      const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a"); a.href=url; a.download="japan-2026-places-seen.txt";
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(e){ reveal(); }
+  }
+};
+function flashBtn(msg){
+  const b=$("#copyLogBtn"); if(!b)return; const o=b.textContent; b.textContent=msg;
+  setTimeout(()=>{ b.textContent=o; },1800);
+}
+
+/* ====================== VIEW: INFO ====================== */
+function viewInfo(){
+  setAccent(LEGS.transit.color); setLegPill({name:"Essentials",flag:"ℹ️"});
+  const E=DATA.emergency;
+  let html='<section class="view"><div class="section-head"><div class="eyebrow">Keep this handy</div><div class="h-section">Essentials</div></div>';
+
+  // Emergency
+  html+='<div class="minihead" style="margin:8px 4px">🚨 Emergency · Japan has no single unified number</div><div class="card">';
+  html+='<a class="emerg-call" href="tel:110"><div><div class="ec-c">Police</div><div class="ec-n">Crime, theft, accidents</div></div><span class="callbtn">Call 110</span></a>';
+  html+='<a class="emerg-call" href="tel:119"><div><div class="ec-c">Fire &amp; Ambulance</div><div class="ec-n">Medical emergencies, fire</div></div><span class="callbtn" style="background:#7a5a14">Call 119</span></a>';
+  html+='</div>';
+
+  // Hospitals & embassy
+  html+='<div class="section-head"><div class="eyebrow">If something happens</div><div class="h-section">Hospitals &amp; US embassy</div></div><div class="card pad">';
+  E.hospitals.forEach(h=>{
+    const ph=(h.embassy.match(/\+[0-9 ]{6,}/)||[])[0];
+    html+='<div style="padding:11px 0;border-bottom:1px solid var(--line)"><div style="font-family:var(--serif);font-size:15px;font-weight:600">'+esc(h.city)+'</div>'+
+      '<div class="note-soft" style="margin-top:4px">🏥 '+esc(h.hospital)+'</div>'+
+      '<div class="note-soft" style="margin-top:3px">🇺🇸 '+esc(h.embassy.replace(/\+[0-9 ]{6,}/,'').replace(/,\s*$/,''))+(ph?' · <a class="tel" href="'+tel(ph)+'">'+esc(ph.trim())+'</a>':'')+'</div></div>';
+  });
+  html+='</div>';
+
+  // Money / power / VAT
+  html+='<div class="section-head"><div class="eyebrow">Practical</div><div class="h-section">Money, power &amp; customs</div></div><div class="card pad"><div class="gk">';
+  E.money.forEach(m=>{ html+='<div><div class="gk-k">'+esc(m.k)+'</div><div class="gk-v">'+esc(m.v)+'</div></div>'; });
+  html+='</div></div>';
+
+  // Drivers
+  if(DATA.drivers.length){
+  html+='<div class="section-head"><div class="eyebrow">Booked door-to-door</div><div class="h-section">Private drivers</div></div>';
+  DATA.drivers.forEach(dr=>{
+    const det=dr.detail||{};
+    html+='<div class="card pad" style="margin-bottom:10px"><div style="font-family:var(--serif);font-size:16px;font-weight:600;line-height:1.2">'+esc(dr.title)+'</div>'+
+      (dr.when?'<div class="note-soft" style="margin-top:4px;color:var(--accent);font-weight:600">'+esc(dr.when)+'</div>':'');
+    const dk=[["Pickup","Pickup"],["Drop‑off","Drop-off"],["Drop-off","Drop-off"],["Route time","Route"],["Departure","Leave by"],["Payment","Pay"],["Meeting point","Meet"],["Start time","Start"]];
+    let kv='';const seen={};
+    dk.forEach(([k,lab])=>{ if(det[k]&&!seen[lab]){seen[lab]=1;kv+='<div class="k">'+lab+'</div><div>'+esc(det[k])+'</div>';} });
+    if(kv) html+='<div class="kv" style="margin-top:10px">'+kv+'</div>';
+    if(dr.stops&&dr.stops.length){
+      html+='<div class="minihead">En route</div>'+dr.stops.map(s=>'<a class="linkrow" target="_blank" rel="noopener" href="'+esc(s.url||'#')+'"><div><div class="lr-name">'+esc(s.name)+'</div><div class="lr-note">'+esc((s.desc||'').slice(0,90))+'</div></div><span class="lr-go">Map ↗</span></a>').join("");
+    }
+    html+='</div>';
+  });
+  }
+
+  // Transport
+  html+='<div class="section-head"><div class="eyebrow">Getting around</div><div class="h-section">Transport</div></div>';
+  DATA.transport.tables.forEach(sec=>{
+    if(!sec.tables.length && !sec.bullets.length) return;
+    html+='<div class="card pad" style="margin-bottom:10px"><div class="minihead" style="margin-top:0">'+esc(sec.name)+'</div>';
+    sec.tables.forEach(tb=>{
+      if(tb.length<1)return;
+      const head=tb[0], rows=tb.slice(1);
+      html+='<table class="dtable"><thead><tr>'+head.map(h=>'<th>'+esc(h)+'</th>').join("")+'</tr></thead><tbody>'+
+        rows.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join("")+'</tr>').join("")+'</tbody></table>';
+    });
+    if(sec.bullets.length){ html+='<div class="gk" style="margin-top:10px">'+sec.bullets.map(b=>'<div class="gk-v" style="margin-top:0">• '+esc(b)+'</div>').join("")+'</div>'; }
+    html+='</div>';
+  });
+  DATA.transport.notes.forEach(n=>{ html+=calloutHTML(n); });
+
+  // Trip at a glance
+  html+='<div class="section-head"><div class="eyebrow">Reference</div><div class="h-section">Trip at a glance</div></div><div class="card pad">';
+  html+='<div class="minihead" style="margin-top:0">Route</div><table class="dtable"><thead><tr><th>Nights</th><th>City</th><th>Hotel</th></tr></thead><tbody>'+
+    DATA.glance.route.map(r=>'<tr><td>'+esc(r.nights)+'</td><td>'+esc(r.city)+' '+esc((r.country.match(/\p{Emoji}/u)||[''])[0])+'</td><td>'+esc(r.hotel)+'</td></tr>').join("")+'</tbody></table>';
+  if(DATA.glance.flights.length){
+    html+='<div class="minihead">Flights</div><div class="gk">'+DATA.glance.flights.map(f=>'<div><div class="gk-k">'+esc(f.k)+'</div><div class="gk-v">'+esc(f.v)+'</div></div>').join("")+'</div>';
+  }
+  html+='</div>';
+
+  // Shared photo album
+  html+='<div class="section-head"><div class="eyebrow">Group album</div><div class="h-section">Shared photos</div><div class="sub">One folder for the whole group — drop your photos here so everyone can see and download the trip’s pictures.</div></div>';
+  html+='<div class="card pad">'+
+    '<a class="btn primary" target="_blank" rel="noopener" href="https://example.com/replace-with-your-shared-album">📷 Open shared photo album</a>'+
+    '<div class="note-soft" style="margin-top:9px">Replace this link with your own shared cloud folder (OneDrive, Google Photos, iCloud). Everyone adds their own shots and browses the rest.</div>'+
+  '</div>';
+
+  // Trip log / export
+  html+='<div class="section-head"><div class="eyebrow">Your trip log</div><div class="h-section">Places we saw</div><div class="sub">Tap “Seen” on each place as you visit it (on every day’s walking tour). Saved on your own device — export your list here to share with the group.</div></div>';
+  html+='<div class="card pad">'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn primary" id="copyLogBtn" onclick="exportTrip(\'copy\')">Copy trip log</button>'+
+      '<button class="btn ghost" style="background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="exportTrip(\'download\')">Download .txt</button>'+
+      '<button class="btn ghost" style="background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="exportTrip(\'show\')">Preview</button>'+
+    '</div>'+
+    '<textarea id="exportBox" class="notes" readonly style="display:none;margin-top:10px;min-height:150px" onclick="this.select()"></textarea>'+
+  '</div>';
+
+  html+='<div class="card pad" style="margin-top:14px" id="storeNote"></div>';
+  html+='</section>';
+  return html;
+}
+
+/* ====================== RENDER ====================== */
+function render(){
+  renderTabs();
+  const app=$("#app");
+  let html="";
+  switch(state.tab){
+    case "today": html=viewToday(); break;
+    case "days":  html=viewDays();  break;
+    case "places":html=viewPlaces();break;
+    case "lists": html=viewLists(); break;
+    case "info":  html=viewInfo();  break;
+  }
+  app.innerHTML=html;
+  // storage warning note (only if storage unavailable, shown on info)
+  const sn=$("#storeNote");
+  if(sn){
+    if(store.ok){ sn.className="card pad note-soft"; sn.innerHTML='✓ Your “Seen” places, notes and packing checkmarks save automatically on this device (each traveler keeps their own). To keep them, open this guide from the same browser. <b>Add to Home Screen</b> for an app-like, offline copy.'; }
+    else { sn.className="card pad note-soft"; sn.style.borderColor="#d8b24a"; sn.innerHTML='⚠︎ Saving is disabled in this preview, so checkmarks and notes won’t persist. They’ll work normally once this file is opened from a hosted link (e.g. GitHub Pages) or saved to your device.'; }
+  }
+}
+
+/* boot: open on Today, jump straight into the live day if mid-trip */
+(function(){
+  render();
+})();
+</script>
+</body>
+</html>

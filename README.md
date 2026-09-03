@@ -17,8 +17,16 @@ the data model in `references/architecture.md`, the design system in
 
 ## Status
 
-Skill installed; trip data not yet entered. Next step: provide the itinerary
-(cities/dates/hotels) so the app can be built.
+Built. `index.html` covers the full Oct 14–27, 2026 itinerary (Tokyo → Yokkaichi
+→ Yunoyama → Kyoto → Hiroshima & Miyajima → Tokyo), all 6 hotels, the rail plan,
+luggage-forwarding hard anchors, and Japan-appropriate packing/shopping lists.
+
+A few things worth double-checking closer to departure (the app calls these out
+too): Miyajima Ropeway and Gozaisho Ropeway operating status, and the outbound
+flight number (not in the source trip pack). The Lists → Shopping categories
+are reasonable defaults (drugstore, snacks, Kyoto crafts, Hiroshima/Miyajima)
+since the trip pack didn't include a per-traveler list — ask Claude to
+customize them if you'd like.
 
 ## Deploying
 
