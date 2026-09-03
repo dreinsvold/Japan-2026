@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0E2A33">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Grand Tour">
+<meta name="description" content="Private travel companion — Belgium, Luxembourg, Alsace & Switzerland, July 2026">
+<title>Grand Tour 2026 · Travel Companion</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230E2A33'/%3E%3Cg fill='none' stroke='%23C99A4A' stroke-width='3'%3E%3Ccircle cx='32' cy='32' r='17'/%3E%3C/g%3E%3Cpath d='M32 17 L37 32 L32 47 L27 32 Z' fill='%23C99A4A'/%3E%3C/svg%3E">
+<style>
+/* ============ TOKENS ============ */
+:root{
+  --ink:#23211C;            /* primary text */
+  --ink-soft:#5A5344;       /* secondary text */
+  --paper:#FAF6EE;          /* ticket-stock page */
+  --paper-2:#F2EBDC;        /* slightly deeper paper */
+  --card:#FFFDF8;           /* raised card */
+  --line:#E2D8C4;           /* hairline on paper */
+  --night:#0E2A33;          /* night-train chrome */
+  --night-2:#15333D;
+  --brass:#B8893E;          /* luggage hardware */
+  --brass-bright:#C99A4A;
+  --brass-tint:#F4E9D2;
+  /* per-leg accents */
+  --be:#C8941E;  --lu:#3E6B8C;  --fr:#A8423C;  --ch:#2F6B4F;  --transit:#7A6A52;
+  --accent:var(--brass);      /* live leg accent, set by JS */
+  --accent-tint:#F4E9D2;
+  --radius:14px;
+  --shadow:0 1px 2px rgba(28,40,44,.06), 0 8px 24px rgba(28,40,44,.07);
+  --tap:44px;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --mono:"SF Mono",ui-monospace,"Roboto Mono","DejaVu Sans Mono",Menlo,Consolas,monospace;
+  --safe-b:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--sans); color:var(--ink);
+  background:var(--paper);
+  -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  overscroll-behavior-y:none;
+}
+/* subtle paper grain via layered gradients (no external asset) */
+body::before{
+  content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+  background:
+    radial-gradient(120% 80% at 50% -10%, rgba(201,154,74,.06), transparent 60%),
+    repeating-linear-gradient(0deg, rgba(0,0,0,.012) 0 1px, transparent 1px 3px);
+}
+a{color:inherit}
+button{font-family:inherit}
+
+/* ============ TOP BAR ============ */
+.topbar{
+  position:sticky; top:0; z-index:40;
+  background:linear-gradient(180deg,var(--night),var(--night-2));
+  color:#F3ECDD; padding:calc(env(safe-area-inset-top,0px) + 9px) 16px 9px;
+  display:flex; align-items:center; gap:12px;
+  border-bottom:1px solid rgba(201,154,74,.28);
+  box-shadow:0 1px 0 rgba(0,0,0,.25);
+}
+.brand{display:flex;flex-direction:column;line-height:1;min-width:0}
+.brand .mono{font-family:var(--mono);font-size:10px;letter-spacing:.32em;color:var(--brass-bright);text-transform:uppercase}
+.brand .ttl{font-family:var(--serif);font-size:16px;letter-spacing:.01em;margin-top:3px;color:#FBF5E8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.leg-pill{
+  margin-left:auto;display:flex;align-items:center;gap:7px;flex-shrink:0;
+  background:rgba(255,255,255,.08); border:1px solid var(--accent);
+  color:#F3ECDD;border-radius:999px;padding:5px 11px 5px 9px;
+  font-size:11px;font-weight:600;letter-spacing:.02em;
+}
+.leg-pill .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 28%,transparent)}
+.leg-pill .flag{font-size:14px}
+
+/* ============ LAYOUT ============ */
+#app{max-width:680px;margin:0 auto;padding:16px 14px calc(96px + var(--safe-b))}
+.view{animation:fade .28s ease both}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.eyebrow{font-family:var(--mono);font-size:10.5px;letter-spacing:.26em;text-transform:uppercase;color:var(--brass);font-weight:600}
+.h-section{font-family:var(--serif);font-size:21px;font-weight:600;margin:4px 0 0;letter-spacing:.01em}
+.sub{color:var(--ink-soft);font-size:13.5px;line-height:1.5}
+.section-head{margin:26px 4px 12px}
+.section-head:first-child{margin-top:6px}
+
+/* ============ CARD ============ */
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow)}
+.card.pad{padding:16px}
+
+/* ============ DEPARTURE BOARD HERO ============ */
+.board{
+  position:relative;overflow:hidden;border-radius:18px;color:#F4ECDC;
+  background:linear-gradient(160deg,var(--night) 0%, #0b232b 55%, #0a1f26 100%);
+  border:1px solid rgba(201,154,74,.35);
+  box-shadow:var(--shadow);
+}
+.board::after{content:"";position:absolute;left:0;right:0;top:0;height:4px;background:var(--accent)}
+.board .inner{padding:18px 18px 20px}
+.board .status{display:flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-bright)}
+.board .status .blink{width:7px;height:7px;border-radius:50%;background:var(--accent);animation:blink 2.4s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:.35}50%{opacity:1}}
+.board .bigdate{font-family:var(--serif);font-size:13px;color:#cdbf9f;margin-top:12px;letter-spacing:.02em}
+.board h1{font-family:var(--serif);font-size:27px;line-height:1.12;margin:5px 0 0;font-weight:600;color:#FCF6EA}
+.board .road{color:#d8cdb2;font-size:14px;margin-top:7px;line-height:1.45}
+.board .legrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.tag{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:5px 10px;border-radius:999px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);color:#ece2cc}
+.tag .ic{opacity:.9}
+.board .quick{display:grid;grid-template-columns:1fr 1fr;gap:1px;margin-top:16px;background:rgba(201,154,74,.22);border-radius:12px;overflow:hidden}
+.board .quick div{background:rgba(8,24,29,.6);padding:11px 12px}
+.board .quick .k{font-family:var(--mono);font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--brass-bright)}
+.board .quick .v{font-size:12.5px;color:#e9dfc8;margin-top:3px;line-height:1.35}
+
+.flipgo{display:flex;gap:9px;margin-top:14px}
+.btn{
+  -webkit-appearance:none;appearance:none;border:0;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;
+  min-height:var(--tap);padding:0 16px;border-radius:11px;font-size:14px;font-weight:600;
+  letter-spacing:.01em;transition:transform .08s ease, filter .15s ease;
+}
+.btn:active{transform:translateY(1px)}
+.btn.primary{background:var(--accent);color:#fff}
+.btn.ghost{background:rgba(255,255,255,.07);color:#f0e7d2;border:1px solid rgba(255,255,255,.2)}
+.btn.block{width:100%}
+
+/* ============ CALLOUTS ============ */
+.callout{display:flex;gap:11px;padding:13px 14px;border-radius:12px;background:var(--brass-tint);border:1px solid color-mix(in srgb,var(--accent) 34%,var(--line));margin-top:10px}
+.callout .bar{width:3px;border-radius:3px;background:var(--accent);flex:0 0 3px}
+.callout .ttl{font-weight:700;font-size:13px;color:#4a3a1c}
+.callout .bd{font-size:13px;color:#5b4d33;line-height:1.5;margin-top:3px}
+
+/* ============ TIMETABLE ============ */
+.timetable{position:relative;margin-top:6px;padding-left:4px}
+.tt-row{display:grid;grid-template-columns:62px 1fr;gap:12px;position:relative;padding:9px 0}
+.tt-row:not(:last-child)::before{content:"";position:absolute;left:73px;top:24px;bottom:-9px;width:2px;background:linear-gradient(var(--line),var(--line))}
+.tt-time{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;text-align:right;padding-top:1px;letter-spacing:.01em}
+.tt-plan{position:relative;font-size:14px;line-height:1.4;color:var(--ink);padding-left:18px}
+.tt-plan::before{content:"";position:absolute;left:-1px;top:5px;width:9px;height:9px;border-radius:50%;background:var(--card);border:2.5px solid var(--accent)}
+
+/* ============ STOPS ============ */
+.stop{display:flex;gap:13px;padding:14px;border-bottom:1px solid var(--line)}
+.stop:last-child{border-bottom:0}
+.stop .num{flex:0 0 28px;height:28px;border-radius:50%;background:var(--accent);color:#fff;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:12.5px;font-weight:700;margin-top:1px}
+.stop .body{min-width:0;flex:1}
+.stop .name{font-family:var(--serif);font-size:16px;font-weight:600;line-height:1.2}
+.stop .desc{font-size:13px;color:var(--ink-soft);line-height:1.5;margin-top:5px}
+.stop .addr{display:inline-flex;align-items:center;gap:6px;margin-top:9px;font-size:12px;color:var(--accent);font-weight:600;text-decoration:none}
+.maplink{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-weight:600;font-size:12.5px;color:var(--accent);
+  border:1px solid color-mix(in srgb,var(--accent) 40%,var(--line));border-radius:9px;padding:7px 11px;background:color-mix(in srgb,var(--accent) 7%,var(--card));min-height:36px}
+.maplink:active{filter:brightness(.96)}
+
+/* ============ GENERIC ROWS / GRID ============ */
+.eat-row{display:grid;grid-template-columns:auto 1fr;gap:10px 12px;padding:11px 0;border-bottom:1px solid var(--line)}
+.eat-row:last-child{border-bottom:0}
+.eat-cat{font-size:13px;white-space:nowrap}
+.eat-rec{font-size:14px;font-weight:600;line-height:1.3}
+.eat-note{grid-column:2;font-size:12.5px;color:var(--ink-soft);margin-top:-4px;line-height:1.4}
+.foodlist{display:flex;flex-direction:column;gap:11px}
+.food .fn{font-family:var(--serif);font-size:15px;font-weight:600}
+.food .fd{font-size:13px;color:var(--ink-soft);line-height:1.5;margin-top:2px}
+.gk{display:grid;gap:11px}
+.gk .gk-k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.gk .gk-v{font-size:13.5px;line-height:1.5;margin-top:3px}
+
+/* ============ DAYS LIST ============ */
+.daycard{display:flex;align-items:stretch;gap:0;text-decoration:none;color:inherit;margin-bottom:10px;overflow:hidden}
+.daycard .stripe{flex:0 0 6px;background:var(--accent)}
+.daycard .dc-in{padding:13px 14px;flex:1;min-width:0}
+.daycard .dc-top{display:flex;align-items:center;gap:8px}
+.daycard .dnum{font-family:var(--mono);font-size:10px;font-weight:700;letter-spacing:.12em;color:#fff;background:var(--accent);padding:2px 7px;border-radius:6px}
+.daycard .ddate{font-family:var(--mono);font-size:11px;color:var(--ink-soft);letter-spacing:.04em}
+.daycard .dhead{font-family:var(--serif);font-size:17px;font-weight:600;margin-top:6px;line-height:1.2}
+.daycard .dsub{font-size:12.5px;color:var(--ink-soft);margin-top:3px;line-height:1.4}
+.daycard .chev{align-self:center;color:var(--accent);font-size:20px;padding-right:12px}
+.today-badge{font-family:var(--mono);font-size:9px;letter-spacing:.14em;background:#1d4a2e;color:#cfe6d6;padding:2px 6px;border-radius:5px;text-transform:uppercase}
+
+/* ============ DAY DETAIL ============ */
+.detail-bar{position:sticky;top:calc(env(safe-area-inset-top,0px) + 48px);z-index:30;display:flex;align-items:center;gap:10px;margin:-16px -14px 10px;padding:10px 14px;background:color-mix(in srgb,var(--paper) 86%,transparent);backdrop-filter:saturate(1.4) blur(8px);-webkit-backdrop-filter:saturate(1.4) blur(8px);border-bottom:1px solid var(--line)}
+.backbtn{display:inline-flex;align-items:center;gap:6px;background:none;border:0;color:var(--accent);font-weight:700;font-size:14px;cursor:pointer;min-height:36px}
+.detail-bar .dstep{margin-left:auto;display:flex;gap:6px}
+.detail-bar .dstep button{width:36px;height:36px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--accent);font-size:16px;cursor:pointer}
+.detail-bar .dstep button:disabled{opacity:.35}
+
+/* ============ NOTES ============ */
+textarea.notes{width:100%;min-height:88px;border:1px dashed color-mix(in srgb,var(--accent) 45%,var(--line));border-radius:12px;background:repeating-linear-gradient(var(--card),var(--card) 27px,var(--line) 27px,var(--line) 28px);padding:8px 12px;font-family:var(--sans);font-size:14px;line-height:28px;color:var(--ink);resize:vertical}
+textarea.notes:focus{outline:2px solid var(--accent);outline-offset:1px}
+
+/* ============ CHECKLIST ============ */
+.progress{height:7px;border-radius:6px;background:var(--paper-2);overflow:hidden;border:1px solid var(--line)}
+.progress > i{display:block;height:100%;background:var(--accent);transition:width .3s ease}
+.check{display:flex;align-items:center;gap:12px;padding:12px 4px;border-bottom:1px solid var(--line);cursor:pointer;min-height:var(--tap)}
+.check:last-child{border-bottom:0}
+.check .box{flex:0 0 22px;height:22px;border-radius:6px;border:2px solid var(--accent);display:flex;align-items:center;justify-content:center;color:#fff;transition:background .12s}
+.check.on .box{background:var(--accent)}
+.check.on .lbl{color:var(--ink-soft);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--accent) 60%,transparent)}
+.check .lbl{font-size:14.5px;line-height:1.35}
+
+/* ============ ACCORDION (cities/info) ============ */
+.acc{border:1px solid var(--line);border-radius:var(--radius);background:var(--card);margin-bottom:10px;overflow:hidden;box-shadow:var(--shadow)}
+.acc > summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:11px;padding:15px 15px;min-height:var(--tap)}
+.acc > summary::-webkit-details-marker{display:none}
+.acc .city-flag{font-size:20px}
+.acc .city-name{font-family:var(--serif);font-size:17px;font-weight:600}
+.acc .city-meta{font-size:11.5px;color:var(--ink-soft);margin-top:1px}
+.acc .mk{margin-left:auto;color:var(--accent);transition:transform .2s;font-size:14px}
+.acc[open] .mk{transform:rotate(90deg)}
+.acc .acc-body{padding:2px 15px 16px}
+.linkchips{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+.chip{display:inline-flex;align-items:center;gap:6px;text-decoration:none;font-size:12.5px;font-weight:600;color:var(--accent);background:color-mix(in srgb,var(--accent) 8%,var(--card));border:1px solid color-mix(in srgb,var(--accent) 35%,var(--line));border-radius:999px;padding:7px 12px;min-height:36px}
+.chip.flat{color:var(--ink-soft);background:var(--paper-2);border-color:var(--line)}
+.minihead{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass);margin:12px 0 7px}
+.linkrow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);text-decoration:none;color:inherit}
+.linkrow:last-child{border-bottom:0}
+.linkrow .lr-name{font-size:14px;font-weight:600;line-height:1.25}
+.linkrow .lr-note{font-size:12px;color:var(--ink-soft)}
+.linkrow .lr-go{margin-left:auto;color:var(--accent);font-size:12px;font-weight:700;white-space:nowrap}
+
+/* ============ INFO TABLES ============ */
+.kv{display:grid;grid-template-columns:120px 1fr;gap:8px 12px;font-size:13.5px;line-height:1.5}
+.kv .k{font-weight:600;color:var(--ink)}
+.dtable{width:100%;border-collapse:collapse;font-size:13px}
+.dtable th{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--brass);text-align:left;padding:7px 8px;border-bottom:2px solid var(--line)}
+.dtable td{padding:9px 8px;border-bottom:1px solid var(--line);vertical-align:top;line-height:1.4}
+.tel{color:var(--accent);font-weight:600;text-decoration:none;white-space:nowrap}
+.emerg-call{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:13px 14px;border-bottom:1px solid var(--line)}
+.emerg-call:last-child{border-bottom:0}
+.emerg-call .ec-c{font-family:var(--serif);font-size:15px;font-weight:600}
+.emerg-call .ec-n{font-size:11.5px;color:var(--ink-soft);margin-top:2px}
+.callbtn{display:inline-flex;align-items:center;gap:7px;background:#b3261e;color:#fff;border-radius:10px;padding:9px 14px;font-weight:700;font-size:14px;text-decoration:none;min-height:40px}
+
+/* ============ BOTTOM TABBAR ============ */
+.tabbar{
+  position:fixed;left:0;right:0;bottom:0;z-index:50;
+  background:linear-gradient(180deg,var(--night-2),var(--night));
+  border-top:1px solid rgba(201,154,74,.3);
+  padding:7px 6px calc(7px + var(--safe-b));
+  display:grid;grid-template-columns:repeat(5,1fr);
+}
+.tab{background:none;border:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:3px;padding:5px 2px;color:#9fb0b3;border-radius:10px}
+.tab .ti{width:23px;height:23px;display:block}
+.tab .tl{font-size:10px;font-weight:600;letter-spacing:.02em}
+.tab.active{color:var(--brass-bright)}
+.tab.active .ti{filter:drop-shadow(0 0 6px color-mix(in srgb,var(--brass-bright) 50%,transparent))}
+.tab svg{width:23px;height:23px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+
+/* ============ MISC ============ */
+.note-soft{font-size:12px;color:var(--ink-soft);line-height:1.5}
+.divider{height:1px;background:var(--line);margin:14px 0}
+.flagrow{font-size:15px;letter-spacing:.18em}
+.pricetag{font-family:var(--mono);font-size:12px;color:var(--brass);font-weight:700}
+.hidden{display:none!important}
+@media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
+@media (min-width:560px){ .board h1{font-size:30px} }
+.seentog{display:inline-flex;align-items:center;gap:6px;font-family:inherit;font-size:12px;font-weight:600;padding:6px 11px;border-radius:999px;border:1px solid var(--line);background:var(--paper-2);color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.seentog .sbox{display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;border:1.5px solid var(--line);font-size:10px;line-height:1;color:transparent}
+.seentog.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.seentog.on .sbox{border-color:#fff;color:var(--accent);background:#fff}
+.stop.seen{background:color-mix(in srgb,var(--accent) 6%,transparent)}
+.leg{display:flex;gap:13px;padding:12px 14px;border-bottom:1px solid var(--line);background:color-mix(in srgb,var(--accent) 4%,transparent)}
+.leg-ic{flex:0 0 28px;height:28px;border-radius:50%;background:var(--paper-2);border:1px dashed color-mix(in srgb,var(--accent) 55%,var(--line));display:flex;align-items:center;justify-content:center;font-size:13px;margin-top:1px}
+.leg-name{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--accent);font-weight:700}
+.leg-desc{font-size:13px;line-height:1.55;color:var(--ink);margin-top:4px}
+.seg{display:flex;gap:6px;background:var(--paper-2);border:1px solid var(--line);border-radius:12px;padding:4px;margin-bottom:14px}
+.seg{flex-wrap:wrap}
+.seg button{flex:1 1 22%;min-width:70px;font-family:inherit;font-size:12.5px;font-weight:600;padding:9px 5px;border:none;border-radius:9px;background:transparent;color:var(--muted);cursor:pointer;-webkit-tap-highlight-color:transparent}
+.seg button.on{background:var(--accent);color:#fff}
+.tier-head{font-family:var(--mono);font-size:12px;letter-spacing:.03em;color:var(--accent);font-weight:700;margin:16px 0 6px}
+.check .mk{margin-left:auto;transition:transform .18s}
+.check.open .mk{transform:rotate(90deg)}
+.buydetails{display:none;padding:0 14px 12px 50px;font-size:13px;color:var(--muted);line-height:1.5}
+.check.open + .buydetails{display:block}
+.buydetails .pricetag{font-size:12px}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <span class="mono">BE · LU · FR · CH</span>
+    <span class="ttl">A Summer Grand Tour</span>
+  </div>
+  <div class="leg-pill" id="legPill"><span class="dot"></span><span class="flag" id="legFlag">✈</span><span id="legName">In transit</span></div>
+</header>
+
+<main id="app"><!-- views render here --></main>
+
+<nav class="tabbar" id="tabbar"></nav>
+
+<script>
+/* ====================== DATA ====================== */
+const DATA = {"meta": {"title": "Belgium · Luxembourg · Alsace · Switzerland", "subtitle": "A Summer Grand Tour", "dates": "July 10–21, 2026", "tripStart": "2026-07-10", "tripEnd": "2026-07-21"}, "glance": {"route": [{"nights": "Jul 11–14 (3)", "city": "Brussels", "hotel": "Brussels Marriott Hotel Grand Place", "country": "Belgium 🇧🇪"}, {"nights": "Jul 14–17 (3)", "city": "Luxembourg City", "hotel": "Luxembourg Marriott Hotel Alfa", "country": "Luxembourg 🇱🇺"}, {"nights": "Jul 17–19 (2)", "city": "Strasbourg", "hotel": "Maison Rouge, Autograph Collection", "country": "France (Alsace) 🇫🇷"}, {"nights": "Jul 19–21 (2)", "city": "Zurich", "hotel": "Zurich Marriott Hotel", "country": "Switzerland 🇨🇭"}], "flights": [{"k": "✈  Outbound", "v": "Departs Fri, Jul 10 — Home City (HOM) → Brussels (BRU), overnight (one connection en route)"}, {"k": "🛬  Lands", "v": "Sat, Jul 11 — Arrival flight, 7:50 AM (Brussels time)"}, {"k": "🚐  Airport transfer", "v": "Airport transfer booked — van, BRU → hotel (see Day 2)"}, {"k": "✈  Return", "v": "Tue, Jul 21 — Zurich (ZRH) → Home City (HOM)"}], "key": ["Tue Jul 14 — Private driver: Brussels → Durbuy → Dinant → Luxembourg (agreed fare (cash)).", "Fri Jul 17 — Private driver: Luxembourg → Haut‑Kœnigsbourg → Colmar → Strasbourg (agreed fare + deposit).", "Sat Jul 19 — Private driver: Strasbourg → Zurich (agreed fare by card + deposit)."]}, "hotels": [{"name": "Brussels Marriott Hotel Grand Place", "address": "Rue Auguste Orts 3–7, 1000 Brussels, Belgium", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Brussels%20Marriott%20Hotel%20Grand%20Place%2C%20Rue%20Auguste%20Orts%2C%20Brussels", "phone": "+32 2 516 90 90", "notes": "Opposite La Bourse, ~3 blocks from the Grand‑Place, ~10 min walk to Brussels Central station."}, {"name": "Luxembourg Marriott Hotel Alfa", "address": "16 Place de la Gare, 1616 Luxembourg", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Luxembourg%20Marriott%20Hotel%20Alfa%2C%20Place%20de%20la%20Gare%2C%20Luxembourg", "phone": "+352 49 00 11 1", "notes": "Directly opposite Luxembourg Central Station (trams & free public transport at the door). ~15 min walk to the old town."}, {"name": "Maison Rouge Strasbourg Hotel & Spa, Autograph Collection", "address": "4 rue des Francs‑Bourgeois, 67000 Strasbourg, France", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Maison%20Rouge%20Strasbourg%20Hotel%20%26%20Spa%20Autograph%20Collection%2C%20rue%20des%20Francs-Bourgeois%2C%20Strasbourg", "phone": "+33 3 88 32 08 60", "notes": "Steps from Place Kléber; ~5 min walk to the Cathedral and Petite France. Parking: Indigo Kléber, 200 m."}, {"name": "Zurich Marriott Hotel", "address": "Neumühlequai 42, 8006 Zürich, Switzerland", "mapUrl": "https://www.google.com/maps/search/?api=1&query=Zurich%20Marriott%20Hotel%2C%20Neumuhlequai%2042%2C%20Zurich", "phone": "+41 44 360 70 70", "notes": "On the Limmat river, ~10 min walk to Zürich HB and Bahnhofstrasse; near the Swiss National Museum."}], "drivers": [{"title": "🍷  Brussels Walking & Tasting Tour", "when": "Monday, July 13 — 5:00 PM", "detail": {"Meeting point": "______________________________", "Start time": "5:00 PM (arrive 10–15 min early)"}, "stops": []}, {"title": "🚗  Private Driver — Day 1: To Luxembourg", "when": "Tuesday, July 14 — Brussels → Durbuy → Dinant → Luxembourg", "detail": {"Pickup": "Brussels Marriott Hotel Grand Place", "Drop‑off": "Luxembourg Marriott Hotel Alfa", "Route time": "~5–6 hrs incl. two stops", "Payment": "agreed fare, cash (settle as agreed)", "Departure": "10:00 AM (be in the lobby by 9:45)"}, "stops": [{"name": "Durbuy", "url": "https://www.google.com/maps/search/?api=1&query=Durbuy%2C%20Belgium", "desc": "Billed as “the smallest city in the world,” a storybook cluster of stone houses on the Ourthe. Stretch your legs (~1.5 hrs): cobbled lanes, the topiary park, and a coffee or Belgian beer on the square."}, {"name": "Dinant", "url": "https://www.google.com/maps/search/?api=1&query=Dinant%2C%20Belgium", "desc": "Dramatic riverside town under a cliff‑top citadel, birthplace of Adolphe Sax (the saxophone). Photograph the Collegiate Church of Notre‑Dame against the rock; grab a couque de Dinant biscuit (~1.5 hrs)."}]}, {"title": "🚗  Private Driver — Day 2: To Strasbourg", "when": "Friday, July 17 — Luxembourg → Haut‑Kœnigsbourg → Colmar → Strasbourg", "detail": {"Pickup": "Luxembourg Marriott Hotel Alfa", "Drop‑off": "Maison Rouge Strasbourg Hotel & Spa", "Route time": "~6–7 hrs incl. two stops", "Payment": "agreed fare + deposit", "Departure": "10:00 AM (be in the lobby by 9:45)"}, "stops": [{"name": "Château du Haut‑Kœnigsbourg", "url": "https://www.google.com/maps/search/?api=1&query=Chateau%20du%20Haut-Koenigsbourg%2C%20Orschwiller%2C%20France", "desc": "A vast restored medieval fortress perched at 757 m with sweeping views over the Alsace plain and Vosges. Buy tickets on arrival; allow ~1.5 hrs for the ramparts, keep and drawbridge. Cooler at altitude — bring a layer."}, {"name": "Colmar", "url": "https://www.google.com/maps/search/?api=1&query=Colmar%20old%20town%2C%20France", "desc": "The fairy‑tale capital of Alsatian charm: half‑timbered houses, flower‑lined canals of “La Petite Venise”. ~2.5 hrs to wander, lunch and shop before the short hop to Strasbourg."}]}, {"title": "🚗  Private Driver — Day 3: To Zurich", "when": "Saturday, July 19 — Strasbourg → Zurich", "detail": {"Pickup": "Maison Rouge Strasbourg Hotel", "Drop‑off": "Zurich Marriott Hotel", "Route time": "~2–2.5 hrs direct", "Payment": "agreed fare by card + deposit", "Departure": "10:00 AM (be in the lobby by 9:45)"}, "stops": []}], "days": [{"n": 1, "weekday": "Friday", "date": "July 10", "iso": "2026-07-10", "short": "Fri, Jul 10", "headline": "Travel Day — Home → Brussels", "subtitle": "Overnight transatlantic · one connection", "overview": "Final packing and the home checklist, then an afternoon departure and an overnight hop across the Atlantic. Sleep on the plane if you can — you land into a full Brussels morning.", "weather": "In transit", "walking": "Minimal — airport terminals", "transport": "HOM → (connection) → BRU, overnight", "schedule": [{"time": "Morning", "plan": "Final packing / home departure checklist"}, {"time": "11:00", "plan": "Leave for the airport"}, {"time": "~2 hrs before", "plan": "Arrive home airport — check bags, security"}, {"time": "Afternoon/Eve", "plan": "Depart home airport, connect en route"}, {"time": "Overnight", "plan": "Transatlantic flight to Brussels (try to sleep)"}], "tour": null, "callouts": [], "eat": [{"cat": "Pre‑flight", "rec": "Airport dinner before you fly", "notes": "Eat before boarding; transatlantic meal service is late"}, {"cat": "Onboard", "rec": "Stay hydrated, skip extra caffeine", "notes": "Helps with the time change"}], "foods": [], "good": {"photo": "—", "coffee": "Airport lounge if you have access", "restrooms": "Terminal & onboard", "rainy": "You’re indoors all day — no backup needed", "packing": "In your carry‑on: passports, medications, chargers + battery, a change of clothes, toothbrush, and offline‑downloaded maps + this guide."}}, {"n": 2, "weekday": "Saturday", "date": "July 11", "iso": "2026-07-11", "short": "Sat, Jul 11", "headline": "Brussels — Arrival & Old Town", "subtitle": "Land 7:50 AM · settle in · the Grand‑Place on foot", "overview": "Land mid‑morning, glide into the centre with your pre‑booked transfer, drop bags, and ease into Brussels with a gentle loop around the Grand‑Place and the covered galleries. Keep it light — you’ll be running on plane sleep.", "weather": "July avg ~22°C / 72°F · occasional showers", "walking": "~4–5 km, flat with cobbles", "transport": "Booked transfer BRU → hotel; everything else on foot", "schedule": [{"time": "7:50", "plan": "Arrival flight lands at Brussels Airport (BRU)"}, {"time": "8:30", "plan": "Passport control & baggage"}, {"time": "9:00", "plan": "Meet the airport transfer → hotel"}, {"time": "9:45", "plan": "Drop bags at the hotel, first coffee"}, {"time": "11:00", "plan": "Grand‑Place & Town Hall"}, {"time": "12:30", "plan": "Lunch in the centre"}, {"time": "2:00", "plan": "Galeries Royales Saint‑Hubert"}, {"time": "3:00", "plan": "Manneken Pis & laneways"}, {"time": "4:00", "plan": "Hotel check‑in / rest"}, {"time": "7:00", "plan": "Dinner near the Grand‑Place"}], "tour": {"intro": "A compact first loop — all within ~10 minutes of the hotel. Tap each name for the map.", "stops": [{"name": "Grand‑Place / Grote Markt", "url": "https://www.google.com/maps/search/?api=1&query=Grand-Place%2C%20Brussels", "address": "Gr-Place, 1000 Brussels", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Grand-Place%2C%20Brussels", "desc": "Brussels’ jaw‑dropping central square, ringed by gilded guild houses and the Gothic Town Hall. A UNESCO site and the perfect orientation point — stand in the middle and turn 360°."}, {"name": "Brussels Town Hall (Hôtel de Ville)", "url": "https://www.google.com/maps/search/?api=1&query=Brussels%20Town%20Hall%20Hotel%20de%20Ville%20Grand%20Place", "address": "Gr-Place, 1000 Brussels", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Brussels%20Town%20Hall%20Hotel%20de%20Ville%20Grand%20Place", "desc": "The 15th‑century spire is the tallest thing on the square; its 96 m tower is topped by St. Michael. The asymmetric facade is a beloved local quirk."}, {"name": "Galeries Royales Saint‑Hubert", "url": "https://www.google.com/maps/search/?api=1&query=Galeries%20Royales%20Saint-Hubert%2C%20Brussels", "address": "Galerie du Roi 5, 1000 Brussels", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Galeries%20Royales%20Saint-Hubert%2C%20Brussels", "desc": "One of Europe’s oldest glass‑roofed shopping arcades (1847). Chocolatiers, cafes and boutiques under a soaring vault — a perfect rainy‑day stroll and dessert stop (Neuhaus is here)."}, {"name": "St. Michael & St. Gudula Cathedral", "url": "https://www.google.com/maps/search/?api=1&query=Cathedral%20of%20St.%20Michael%20and%20St.%20Gudula%2C%20Brussels", "address": "Place Sainte‑Gudule, 1000 Brussels", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Cathedral%20of%20St.%20Michael%20and%20St.%20Gudula%2C%20Brussels", "desc": "Twin‑towered Gothic cathedral with luminous 16th‑century stained glass. Calm, cool and free to enter — a few minutes uphill from the galleries."}, {"name": "Manneken Pis", "url": "https://www.google.com/maps/search/?api=1&query=Manneken%20Pis%2C%20Brussels", "address": "Rue de l’Étuve 31, 1000 Brussels", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Manneken%20Pis%2C%20Brussels", "desc": "The cheeky little fountain‑boy, smaller than you expect and often dressed in a themed costume. Worth a quick photo en route to the chocolate shops on Rue au Beurre."}, {"name": "Mont des Arts viewpoint", "url": "https://www.google.com/maps/search/?api=1&query=Mont%20des%20Arts%2C%20Brussels", "address": "Mont des Arts, 1000 Brussels", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Mont%20des%20Arts%2C%20Brussels", "desc": "A formal garden on a terrace with the best free skyline view over the lower town toward the Town Hall spire — lovely in late‑afternoon light."}, {"name": "Longchamp (optional — shopping)", "url": "https://www.google.com/maps/search/?api=1&query=Longchamp%20Galerie%20du%20Roi%20Galeries%20Royales%20Saint-Hubert%20Brussels", "address": "Galerie du Roi, Galeries Royales Saint-Hubert, 1000 Brussels", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Longchamp%20Galerie%20du%20Roi%20Galeries%20Royales%20Saint-Hubert%20Brussels", "desc": "Inside the Galeries Royales Saint-Hubert (already on this loop) — usually one of Belgium's best selections of Le Pliage colours and seasonal collections. Ask if they have any colours NOT distributed in North America. There's also a Longchamp on Avenue Louise, but if you only do one, this Galerie du Roi location is the pick. Tip: if you're torn between buying here or in Strasbourg, Strasbourg tends to win on price — so hold off unless a colour here grabs you."}]}, "callouts": [{"title": "Airport transfer · Brussels Airport (BRU) → hotel", "body": "Arrival flight tracked — lands 7:50 AM (Brussels time), marked On Time. Vehicle: van · Meet at the pickup point after baggage claim. The driver tracks your flight, so a slightly late landing is fine. Have your transfer app or confirmation open with data/Wi‑Fi on arrival."}], "eat": [{"cat": "☕ Coffee", "rec": "OR Coffee Brewery (Rue Auguste Orts 9)", "notes": "Excellent roaster, steps from the hotel"}, {"cat": "🍽 Lunch", "rec": "Nüetnigenough (Rue du Lombard 25)", "notes": "Cozy gastro‑pub; carbonnade & local beer — budget–mid"}, {"cat": "🍦 Dessert", "rec": "Maison Dandoy (Rue Charles Buls 14)", "notes": "Brussels & Liège waffles, speculoos — the classic"}, {"cat": "🍽 Dinner", "rec": "Chez Léon or Aux Armes de Bruxelles (Rue des Bouchers)", "notes": "Moules‑frites institutions — touristy but fun"}, {"cat": "🍻 Beer", "rec": "Delirium Café (Impasse de la Fidélité 4)", "notes": "Hundreds of Belgian beers; book nothing, just go"}], "foods": [{"name": "Belgian waffles", "desc": "Light, sugar‑dusted Brussels waffles vs. dense, caramelized Liège waffles — try both."}, {"name": "Frites", "desc": "Twice‑fried and crisp, in a cone with mayo — the national snack, best from a frituur."}, {"name": "Moules‑frites", "desc": "Mussels steamed in white wine with fries — the summer classic."}, {"name": "Belgian pralines", "desc": "Filled chocolates, invented here; buy fresh from a small chocolatier."}, {"name": "Trappist beer", "desc": "Strong abbey ales (Westmalle, Chimay, Orval) — sip one at Delirium."}], "good": {"photo": "Grand‑Place from the corner by Rue au Beurre; the Galeries arcade; Mont des Arts terrace", "coffee": "OR Coffee Brewery; MOK (Rue Antoine Dansaert 196)", "restrooms": "Paid public toilets ~€0.50–1 (bring coins); free in cafes/department stores", "rainy": "Galeries Royales (covered), MIM musical‑instruments museum, Belgian Comic Strip Center", "packing": "Broken‑in walking shoes for cobblestones; a light rain layer."}}, {"n": 3, "weekday": "Sunday", "date": "July 12", "iso": "2026-07-12", "short": "Sun, Jul 12", "headline": "Day Trip — Bruges", "subtitle": "Train from Brussels · canals, chocolate & a brewery", "overview": "An easy hour by train delivers you into the best‑preserved medieval city in Belgium — a postcard of canals, gabled houses and chocolate windows. Start early to beat the day‑trippers to the canal boats.", "weather": "July avg ~21°C / 70°F · breezy on the water", "walking": "~6–7 km on cobbles", "transport": "IC train Brussels‑Central → Brugge main station (~1 hr, ~2/hr)", "schedule": [{"time": "8:00", "plan": "Walk to Brussels‑Central (~10 min from hotel)"}, {"time": "~8:25", "plan": "Train to Brugge — book to “Brugge”, the main station (next IC dir. Blankenberge/Knokke/Oostende, ~1 hr)"}, {"time": "~9:30", "plan": "Arrive Brugge; walk in through Minnewater Park"}, {"time": "9:45", "plan": "Minnewater (Lake of Love) & the Beguinage"}, {"time": "10:15", "plan": "Reach the canal docks near Rozenhoedkaai"}, {"time": "10:30", "plan": "Canal cruise (go early — shortest queue)"}, {"time": "11:15", "plan": "Rozenhoedkaai → Burg Square → Markt & Belfry"}, {"time": "12:15", "plan": "Church of Our Lady & chocolate stop"}, {"time": "1:00", "plan": "Lunch"}, {"time": "2:30", "plan": "De Halve Maan Brewery tour/tasting"}, {"time": "4:00", "plan": "Shopping on Steenstraat & Katelijnestraat (plus the optional Dijver/Vismarkt markets)"}, {"time": "5:45", "plan": "Train back to Brussels"}, {"time": "7:00", "plan": "Dinner in Brussels"}], "tour": {"intro": "Follow this exact order from the station — it takes you through Minnewater Park into the medieval centre, reaching the canal docks for a 10:00 cruise before the crowds. All flat and easy.", "stops": [{"name": "Brugge Railway Station", "url": "https://www.google.com/maps/search/?api=1&query=Brugge%20railway%20station%2C%20Stationsplein%2C%20Bruges", "address": "Stationsplein, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Brugge%20railway%20station%2C%20Stationsplein%2C%20Bruges", "desc": "This is Brugge’s MAIN station (select “Brugge” when booking — not Brugge‑Sint‑Pieters). From the exit it’s a flat, safe ~20 min walk to the Markt, ~10–12 min to Minnewater, and ~15 min to the first canal docks. Trains from Brussels‑Central take ~1 hr, ~2/hr, no seat reservation."}, {"name": "Minnewater Park (Lake of Love)", "url": "https://www.google.com/maps/search/?api=1&query=Minnewater%20Bruges", "address": "Minnewater, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Minnewater%20Bruges", "desc": "Walk straight into the park from the station — a swan‑dotted lake and the loveliest possible introduction to Bruges, quiet and golden in the morning."}, {"name": "Beguinage (Begijnhof)", "url": "https://www.google.com/maps/search/?api=1&query=Begijnhof%20Bruges", "address": "Begijnhof 24–30, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Begijnhof%20Bruges", "desc": "Just past the lake: a serene 13th‑century walled courtyard of white houses around a green, once home to lay religious women. Hushed and beautiful — continue through toward the canals."}, {"name": "Canal Boat Docks (near Rozenhoedkaai)", "url": "https://www.google.com/maps/search/?api=1&query=Rozenhoedkaai%20boat%20dock%20Bruges", "address": "Near Rozenhoedkaai / Dijver, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Rozenhoedkaai%20boat%20dock%20Bruges", "desc": "Aim for the 10:00 cruise. All five operators run the same 30‑min route for €15/adult, so the best boat is simply the one with the shortest line — the docks cluster around Rozenhoedkaai and the Dijver. No advance booking; pay on the spot, cash for tips."}, {"name": "Rozenhoedkaai", "url": "https://www.google.com/maps/search/?api=1&query=Rozenhoedkaai%2C%20Bruges", "address": "Rozenhoedkaai, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Rozenhoedkaai%2C%20Bruges", "desc": "The single most photographed corner in Bruges — the belfry mirrored in the canal. Best light first thing in the morning."}, {"name": "Burg Square", "url": "https://www.google.com/maps/search/?api=1&query=Burg%2C%20Bruges", "address": "Burg, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Burg%2C%20Bruges", "desc": "One of Bruges' two central plazas — the medieval seat of power, fronted by the ornate Gothic City Hall (Stadhuis). A short hop up from Rozenhoedkaai and the start of the old-town core."}, {"name": "Basilica of the Holy Blood (Heilig-Bloedbasiliek)", "url": "https://www.google.com/maps/search/?api=1&query=Basilica%20of%20the%20Holy%20Blood%2C%20Burg%2C%20Bruges", "address": "Burg 13, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Basilica%20of%20the%20Holy%20Blood%2C%20Burg%2C%20Bruges", "desc": "Tucked into the corner of Burg Square: a 12th-century church in two levels — a plain Romanesque lower chapel and an ornate upper chapel said to hold a relic of Christ's blood. Small, free to enter, quick to see."}, {"name": "Markt & Burg Squares (wander)", "url": "https://www.google.com/maps/search/?api=1&query=Markt%2C%20Bruges", "address": "Markt, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Markt%2C%20Bruges", "desc": "Bruges' grand main square, ringed by step-gabled guild houses and lively cafés — the heart of the old town. Pair it with neighbouring Burg Square for the full sweep of historic architecture and street life."}, {"name": "Climb the Belfry of Bruges (Belfort)", "url": "https://www.google.com/maps/search/?api=1&query=Belfry%20of%20Bruges%2C%20Markt%2C%20Bruges", "address": "Markt 7, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Belfry%20of%20Bruges%2C%20Markt%2C%20Bruges", "desc": "The iconic 83 m medieval bell tower over the Markt with panoramic views over the old town and canals — a must-do for first-timers. Climb all 366 narrow steps if legs allow; timed tickets help skip the queue."}, {"name": "Church of Our Lady (Onze‑Lieve‑Vrouwekerk)", "url": "https://www.google.com/maps/search/?api=1&query=Church%20of%20Our%20Lady%20Bruges%20Mariastraat", "address": "Mariastraat, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Church%20of%20Our%20Lady%20Bruges%20Mariastraat", "desc": "Its 115 m brick spire is among the tallest in the world; inside is Michelangelo’s “Madonna and Child,” the only sculpture of his to leave Italy in his lifetime. A few minutes south of the Markt toward the chocolate shops."}, {"name": "Gruuthusemuseum", "url": "https://www.google.com/maps/search/?api=1&query=Gruuthusemuseum%20Bruges", "address": "Dijver 17C, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Gruuthusemuseum%20Dijver%20Bruges", "desc": "A grand 15th-century city palace built by the Lords of Gruuthuse, one of Bruges' richest families. Their fortune came from a monopoly on 'gruut' — the herb-and-spice mix used to flavour and preserve beer before hops took over — which let them tax nearly every brew in the city. The most famous lord, Louis of Gruuthuse, was a knight, book collector and diplomat who sheltered the exiled English king Edward IV here in 1471. Look for the family's private wooden prayer-gallery that connects straight into the Church of Our Lady next door, so they could hear Mass without stepping outside. Reopened in 2019 as a museum of Bruges' decorative arts — tapestries, lace, silver and furniture."}, {"name": "Boniface Bridge (Bonifaciusbrug)", "url": "https://www.google.com/maps/search/?api=1&query=Bonifacius%20Bridge%20Bruges", "address": "Bonifaciusbrug (by the Arentshof), 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Bonifacius%20Bridge%20Bruges", "desc": "A tiny, ivy-framed footbridge tucked behind the Church of Our Lady beside the Gruuthuse palace and the Arentshof garden — one of the most photographed corners of Bruges. The twist: despite looking centuries old, it's actually one of the city's youngest bridges, built only around 1910. Nearby stands a bust of Juan Luis Vives, the 16th-century Spanish humanist scholar who made Bruges his home. A quiet, crowd-free photo stop."}, {"name": "St. John's Hospital (Sint-Janshospitaal)", "url": "https://www.google.com/maps/search/?api=1&query=Sint-Janshospitaal%20Memling%20Museum%20Bruges", "address": "Mariastraat 38, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Sint-Janshospitaal%20Mariastraat%20Bruges", "desc": "One of the oldest surviving hospital buildings in Europe, founded around 1150 to care for pilgrims, travellers and the sick; nuns and monks nursed patients here for nearly 700 years. Today it holds the Memling Museum, with six masterpieces by the Early-Netherlandish painter Hans Memling — most famously the exquisite Shrine of St. Ursula, painted for this very hospital — plus a preserved old pharmacy. It faces the Church of Our Lady across Mariastraat."}, {"name": "The Chocolate Line", "url": "https://www.google.com/maps/search/?api=1&query=The%20Chocolate%20Line%20Simon%20Stevinplein%20Bruges", "address": "Simon Stevinplein 19, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=The%20Chocolate%20Line%20Simon%20Stevinplein%20Bruges", "desc": "Bruges’ most inventive chocolatier (think Earl Grey, or chili). For a classic box, Dumon (Eiermarkt) is another local favorite a few streets away."}, {"name": "De Halve Maan Brewery", "url": "https://www.google.com/maps/search/?api=1&query=De%20Halve%20Maan%20Brewery%20Walplein%2026%20Bruges", "address": "Walplein 26, 8000 Brugge", "addressUrl": "https://www.google.com/maps/search/?api=1&query=De%20Halve%20Maan%20Brewery%20Walplein%2026%20Bruges", "desc": "The last family brewery in the historic centre, home of Brugse Zot. Tours include the rooftop view and a tasting — popular, so book the tour slot ahead online."}, {"name": "Olleke Wizarding Shop (optional — Harry Potter)", "url": "https://www.google.com/maps/search/?api=1&query=Olleke%20Wizarding%20Shop%20Wijngaardstraat%2012%20Bruges", "address": "Wijngaardstraat 12, 8000 Brugge (2nd branch: Groeninge 1)", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Olleke%20Wizarding%20Shop%20Wijngaardstraat%2012%20Bruges", "desc": "Award-winning wizarding shop — Harry Potter, Fantastic Beasts, Lord of the Rings and more, often cheaper than official stores. Two Bruges branches: Wijngaardstraat 12 (open 7 days, right by the Beguinage — easy to catch early on the route) and Groeninge 1 in the centre near the Dijver (closed Tue & Thu). Sunday Jul 12: both open."}, {"name": "The Wandering Wizard (optional — Harry Potter)", "url": "https://www.google.com/maps/search/?api=1&query=The%20Wandering%20Wizard%20Harry%20Potter%20shop%20Bruges", "address": "Old-town centre, Bruges", "addressUrl": "https://www.google.com/maps/search/?api=1&query=The%20Wandering%20Wizard%20Harry%20Potter%20shop%20Bruges", "desc": "A small Harry Potter merchandise store in the heart of the old town — a fun quick browse near the Markt/chocolate shops. Opening hours can vary, so check before making a special trip."}, {"name": "Dijver folklore & antiques market (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Dijver%20antiques%20market%20Bruges", "address": "Dijver, 8000 Brugge (canal-side by the Groeningemuseum)", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Dijver%20Bruges", "desc": "Type: antiques, bric-a-brac & handmade crafts under the trees along the Dijver canal. Runs Sat, Sun & holidays 10am–6pm (mid-Mar to mid-Nov) — your Sunday visit catches it. Impact: essentially zero — right on your route between Rozenhoedkaai and the Church of Our Lady, and the quiet Groenerei canal is a 2-minute step away for crowd-free photos."}, {"name": "Vismarkt craft market (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Vismarkt%20Bruges", "address": "Vismarkt, 8000 Brugge (just off Huidenvettersplein)", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Vismarkt%20Bruges", "desc": "Type: artisanal & handmade crafts in the colonnaded 18th-century fish market. Open daily (roughly 9:30am–5pm). Impact: minimal — about a 2-minute step off Rozenhoedkaai, easy to fold into the walk."}]}, "callouts": [{"title": "🚶  Recommended arrival route (flat & scenic)", "body": "1. Exit Brugge Station (the main station — not Sint‑Pieters). 2. Walk through Minnewater Park (Lake of Love). 3. Continue past the Beguinage. 4. Arrive at the canal boat docks near Rozenhoedkaai. 5. Take the 10:00 AM canal cruise. 6. Continue to Burg Square and the Markt afterward. Distances from the station: Markt ~20 min · Minnewater ~10–12 min · first canal docks ~15 min."}, {"title": "📲  Before you go", "body": "Download the Google Maps offline area for Bruges so you can navigate the route without using mobile data."}], "eat": [{"cat": "☕ Coffee", "rec": "Li O Lait or Servaas Van Mullem", "notes": "Near the centre; good pastries"}, {"cat": "🍽 Lunch", "rec": "That’s Toast / Books & Brunch / De Stove", "notes": "Budget brunch to mid‑range bistro"}, {"cat": "🍟 Quick bite", "rec": "Fries on the Markt (frituur)", "notes": "Order them ‘met mayo’"}, {"cat": "🍻 Beer", "rec": "De Halve Maan — Brugse Zot", "notes": "Tasting included with the tour"}, {"cat": "🍽 Dinner (Brussels)", "rec": "Back in Brussels ~7:00", "notes": "See Brussels dining"}], "foods": [{"name": "Brugse Zot", "desc": "Bruges’ own golden ale, brewed at De Halve Maan — a tasting comes with the tour."}, {"name": "Bruges chocolate", "desc": "The city is chocolate‑mad; The Chocolate Line and Dumon are local favorites."}, {"name": "Carbonnade flamande", "desc": "Beef braised slowly in dark Belgian beer — the classic Flemish stew."}, {"name": "Speculoos", "desc": "Crisp, spiced caramel biscuits — the cookie with your coffee, and a spread."}], "good": {"photo": "Rozenhoedkaai; Bonifacius Bridge by Our Lady; the Markt from the belfry", "coffee": "Li O Lait; Servaas Van Mullem (great cakes)", "restrooms": "Paid (~€0.50) at the station, Markt area and museums; free with a cafe stop", "rainy": "Groeningemuseum (Flemish Primitives), Historium, Choco‑Story chocolate museum", "packing": "Light jacket — the open canal boats get windy even in July."}}, {"n": 4, "weekday": "Monday", "date": "July 13", "iso": "2026-07-13", "short": "Mon, Jul 13", "headline": "Ghent + optional Coast", "subtitle": "Castle, canals & the Van Eyck altarpiece — with Ostend & De Haan if you're up for it", "overview": "With the evening tour cancelled, Ghent is today's anchor — the moated castle, the Van Eyck altarpiece and a canal cruise past the medieval waterfront — and the North Sea coast (Ostend + Belle Époque De Haan) is an optional afternoon add-on if the group's up for it. It's all on one rail line, so the coast is an easy westward extension, and the evening is free.", "weather": "Ghent ~22°C / low-70s°F · coast a touch cooler & breezier", "walking": "~4 km in Ghent (＋ more if you add the coast)", "transport": "IC train Brussels ⇄ Ghent (~35 min); optional Ghent → Ostend (~45 min) + Kusttram", "schedule": [{"time": "9:00", "plan": "Train Brussels‑Central → Gent‑Sint‑Pieters (~35 min)"}, {"time": "9:45", "plan": "Tram 1 or a short walk into the old centre"}, {"time": "10:00", "plan": "Gravensteen castle & the old town"}, {"time": "11:15", "plan": "St. Bavo's Cathedral & the Ghent Altarpiece"}, {"time": "12:00", "plan": "Ghent canal cruise from the Graslei (~40 min)"}, {"time": "12:45", "plan": "Lunch on the Graslei/Korenlei waterfront"}, {"time": "2:00", "plan": "Optional: train Ghent → Ostend (~45 min) for the coast"}, {"time": "3:00", "plan": "Optional: Ostend promenade + Kusttram to De Haan"}, {"time": "~6:00", "plan": "Train back to Brussels (via Ghent) — or linger for Ghent's golden hour"}, {"time": "Evening", "plan": "Dinner in Ghent or Brussels (evening free — tour cancelled)"}], "tour": {"intro": "Ghent's compact centre and a canal cruise first; the coast stops are optional if you head west in the afternoon. Tap any name for the map.", "stops": [{"name": "Gravensteen (Castle of the Counts), Ghent", "url": "https://www.google.com/maps/search/?api=1&query=Gravensteen%20Sint-Veerleplein%2011%20Ghent", "address": "Sint‑Veerleplein 11, 9000 Gent", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Gravensteen%20Sint-Veerleplein%2011%20Ghent", "desc": "A genuine moated 12th‑century stone fortress in the middle of the city, with a witty audioguide and rooftop rampart views. ~15 min from Gent‑Sint‑Pieters station by Tram 1, or a 20-min walk."}, {"name": "St. Bavo's Cathedral & the Ghent Altarpiece", "url": "https://www.google.com/maps/search/?api=1&query=Saint%20Bavo%27s%20Cathedral%20Ghent%20Sint-Baafsplein", "address": "Sint‑Baafsplein, 9000 Gent", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Saint%20Bavo%27s%20Cathedral%20Ghent%20Sint-Baafsplein", "desc": "Home to the Van Eyck brothers' 1432 'Adoration of the Mystic Lamb' — one of the most influential (and most stolen) paintings in history. Book the timed altarpiece visit with its AR guide."}, {"name": "Ghent Canal Cruise", "url": "https://www.google.com/maps/search/?api=1&query=Ghent%20canal%20boat%20tour%20Graslei", "address": "Graslei / Korenlei quay, 9000 Gent", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Graslei%20Ghent", "desc": "A ~40-minute open-boat cruise along the Leie from the Graslei/Korenlei quays — gliding past the medieval guild houses, under low bridges and around Gravensteen. The loveliest way to see the city, with entertaining guides. Boats leave frequently in summer (~€10); buy at the quayside, no need to pre-book."}, {"name": "Graslei & Korenlei", "url": "https://www.google.com/maps/search/?api=1&query=Graslei%20Ghent", "address": "Graslei, 9000 Gent", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Graslei%20Ghent", "desc": "Ghent's medieval harbour, guild houses lining both banks of the Leie — the city's most beautiful stretch and glorious in late-afternoon golden light. The lunch-and-linger heart of the day; grab a terrace or a cuberdon."}, {"name": "Belfry of Ghent (optional climb)", "url": "https://www.google.com/maps/search/?api=1&query=Belfry%20of%20Ghent%20Sint-Baafsplein", "address": "Sint‑Baafsplein, 9000 Gent", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Belfry%20of%20Ghent%20Sint-Baafsplein", "desc": "A UNESCO‑listed 91 m tower between the two great churches; an elevator goes most of the way up for a panorama over the rooftops."}, {"transit": true, "name": "Optional: Ghent → the coast", "url": "https://www.google.com/maps/search/?api=1&query=Ostend%20railway%20station%20Belgium", "desc": "Up for the sea? Hop an IC train from Gent‑Sint‑Pieters to Ostend (~45 min, ~2/hr, unreserved). At Ostend the Kusttram is across the station forecourt — grab a €7.50 De Lijn day pass to reach De Haan (~20 min east). Heading home, the same line runs Ostend → (Ghent) → Brussels. Prefer to keep it slow? Skip the coast and enjoy Ghent's golden hour on the Graslei instead."}, {"name": "Albert I Promenade & Beach, Ostend (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Albert%20I%20Promenade%20Ostend", "address": "Albert I Promenade, 8400 Oostende", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Albert%20I%20Promenade%20Ostend", "desc": "Ostend's grand seafront walk — rated the best ~90-minute coastal stroll on the line — past the elegant Royal (Venetian) Galleries and the wide North Sea beach. Look for the striking 'Rock Strangers' sculpture."}, {"name": "De Haan (Belle Époque village) (optional)", "url": "https://www.google.com/maps/search/?api=1&query=De%20Haan%20aan%20Zee%20Belgium", "address": "De Haan aan Zee (Kusttram stop), 8420 De Haan", "addressUrl": "https://www.google.com/maps/search/?api=1&query=De%20Haan%20aan%20Zee%20Belgium", "desc": "The one genuinely storybook town on the coast: a preserved Belle Époque resort of turreted villas and leafy lanes (Einstein briefly lived here). A ~20-minute Kusttram ride east of Ostend — the prettiest stop on the line."}, {"name": "De Haan Dyke Promenade (optional)", "url": "https://www.google.com/maps/search/?api=1&query=De%20Haan%20dijk%20promenade%20beach", "address": "Zeedijk, 8420 De Haan", "addressUrl": "https://www.google.com/maps/search/?api=1&query=De%20Haan%20dijk%20promenade%20beach", "desc": "The seafront dyke lined with cafes and ice-cream spots — an easy, breezy walk with the beach on one side and the villas on the other before the train back."}]}, "callouts": [{"title": "☀️ The coast is optional today", "body": "Ghent is the anchor — do it fully first (castle, altarpiece, canal cruise, Graslei). If you've got the energy and the weather's good, the ~45-min train west to Ostend + De Haan is an easy afternoon add. If not, linger in Ghent for golden hour on the Graslei and head back whenever."}, {"title": "🚣 Ghent canal cruise", "body": "The ~40-min open-boat trip from the Graslei/Korenlei quays is the highlight — medieval guild houses from the water, past Gravensteen. Boats run frequently in summer (~€10), buy at the quay, no booking needed. Late morning beats the mid-afternoon queue."}, {"title": "🎟️ Evening is free — tour cancelled", "body": "The Brussels Walking & Tasting Tour (was Mon 5:00 PM) is cancelled, so nothing to rush back for. Trains Ghent → Brussels run every ~10–30 min (~35 min), unreserved — linger for dinner and catch any train home."}], "eat": [{"cat": "🍽 Lunch (Ghent)", "rec": "A Graslei/Korenlei waterfront terrace", "notes": "Waterzooi (creamy Ghent stew) or a relaxed canal-side lunch"}, {"cat": "🍦 Treat", "rec": "Cuberdons from a Groentenmarkt stall", "notes": "Purple cone-shaped 'Ghent noses,' soft & raspberry-sweet"}, {"cat": "🍽 Dinner (Ghent)", "rec": "'t Klokhuis or Mosquito Coast", "notes": "Relaxed, no rush — or head back and eat near the Grand-Place"}, {"cat": "🦐 If you hit the coast", "rec": "Shrimp croquettes; ice cream on the De Haan dyke", "notes": "North Sea garnaal is the classic seaside bite"}], "foods": [{"name": "Gentse waterzooi", "desc": "Ghent's creamy chicken (or fish) stew with vegetables — the city's signature dish."}, {"name": "Cuberdons", "desc": "Purple cone-shaped 'Ghent noses,' soft and raspberry-sweet — from a Groentenmarkt stall."}, {"name": "North Sea grey shrimp", "desc": "If you head to the coast: tiny, sweet 'garnaal,' best as croquettes or in a stuffed tomato."}, {"name": "Belgian frites", "desc": "Grab a cone from a frituur in Ghent or on the coast — always a good idea."}], "good": {"photo": "Graslei from the water; Gravensteen; De Haan's Belle Époque streets (if you add the coast)", "coffee": "A Graslei terrace; Mokabon (Ghent)", "restrooms": "Ghent cathedral, cafes & stations; coast seafront (some paid)", "rainy": "Ghent works in light rain — Gravensteen, St. Bavo's and even the canal boats are fine; save the coast for a clear afternoon.", "packing": "Comfortable shoes for the old town; a light layer if you head to the breezy coast."}}, {"n": 5, "weekday": "Tuesday", "date": "July 14", "iso": "2026-07-14", "short": "Tue, Jul 14", "headline": "Private Driver — Brussels → Luxembourg", "subtitle": "Durbuy & Dinant en route · Ardennes scenery", "overview": "A relaxed transfer day with two storybook stops through the Belgian Ardennes. Bags go straight in the car — no train logistics. (Full driver details are in Confirmed Tours & Private Drivers.)", "weather": "July avg ~22–24°C / 72–75°F", "walking": "Light — strolling each town", "transport": "Private driver (booked), door to door", "schedule": [{"time": "9:45", "plan": "Bags down, lobby of Brussels Marriott"}, {"time": "10:00", "plan": "Private driver pickup"}, {"time": "~11:30", "plan": "Durbuy — “world’s smallest city” (~1.5 hr)"}, {"time": "~2:00", "plan": "Dinant — riverside & citadel (~1.5 hr)"}, {"time": "Evening", "plan": "Arrive Luxembourg Marriott Hotel Alfa"}, {"time": "Dinner", "plan": "Brasserie Alfa (in hotel) or nearby"}, {"time": "Payment", "plan": "agreed fare (cash)"}, {"time": "Driver", "plan": "______________  ☎ ____________"}], "tour": {"intro": "Two Ardennes stops with your driver: tiny Durbuy, then riverside Dinant. Tap any name for the map.", "stops": [{"name": "Durbuy Old Town", "url": "https://www.google.com/maps/search/?api=1&query=Durbuy%20old%20town%20Belgium", "address": "Vieille Ville, 6940 Durbuy", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Durbuy%20old%20town%20Belgium", "desc": "Billed as 'the smallest city in the world' — cobbled lanes and 17th-century half-timbered and stone houses you can cross end to end in about five minutes. The streets themselves are the attraction; just wander."}, {"name": "Château de Durbuy", "url": "https://www.google.com/maps/search/?api=1&query=Chateau%20de%20Durbuy%20castle", "address": "Rue du Comte Th. d'Ursel, 6940 Durbuy", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Chateau%20de%20Durbuy%20castle", "desc": "The 11th-century castle over the town — a private residence, so it's admired from outside, but its exterior makes a great photo, especially from across the Ourthe river."}, {"name": "Parc des Topiaires (Topiary Park)", "url": "https://www.google.com/maps/search/?api=1&query=Parc%20des%20Topiaires%20Durbuy", "address": "Rue Haie Himbe 1, 6940 Durbuy", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Parc%20des%20Topiaires%20Durbuy", "desc": "On the riverbank — over 250 topiary sculptures of animals and figures, billed as the largest topiary garden in Europe. About €4.50–5 to enter; a fun 20–30 minutes with castle views."}, {"transit": true, "name": "Durbuy → Dinant (with your driver)", "url": "https://www.google.com/maps/search/?api=1&query=Dinant%20Belgium", "desc": "About an hour's drive south through the rolling Ardennes to Dinant on the Meuse — sit back and enjoy the scenery; no logistics on your end."}, {"name": "Dinant Citadel", "url": "https://www.google.com/maps/search/?api=1&query=Citadelle%20de%20Dinant", "address": "Chemin de la Citadelle 1, 5500 Dinant", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Citadelle%20de%20Dinant", "desc": "The clifftop fortress over the Meuse and the main sight. Ride the cable car up from beside the church, or climb the 408 steps — it costs the same either way. Up top: panoramic river views plus WWI trench and history exhibits. Go first, before it gets busy; ~45 min–1 hr."}, {"name": "Collégiale Notre-Dame de Dinant", "url": "https://www.google.com/maps/search/?api=1&query=Collegiale%20Notre-Dame%20de%20Dinant", "address": "Place Reine Astrid, 5500 Dinant", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Collegiale%20Notre-Dame%20de%20Dinant", "desc": "The riverside church at the base of the cliff, with its distinctive pear-shaped bell tower — free to step inside, right where the cable car starts."}, {"name": "Saxophone Bridge (Pont Charles de Gaulle)", "url": "https://www.google.com/maps/search/?api=1&query=Pont%20Charles%20de%20Gaulle%20Dinant%20saxophone", "address": "Pont Charles de Gaulle, 5500 Dinant", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Pont%20Charles%20de%20Gaulle%20Dinant%20saxophone", "desc": "Dinant is Adolphe Sax's birthplace, so the bridge is lined with giant colourful saxophone sculptures — the classic photo. A statue of Charles de Gaulle nearby marks where he was wounded in WWI."}, {"name": "Maison de Monsieur Sax (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Maison%20de%20Monsieur%20Sax%20Dinant", "address": "37 Rue Adolphe Sax, 5500 Dinant", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Maison%20de%20Monsieur%20Sax%20Dinant", "desc": "A small, free exhibition on the saxophone's inventor, on the pedestrian street named after him — a quick optional look for music fans."}]}, "callouts": [{"title": "🏘️ Durbuy in ~1.5 hr", "body": "Wander the tiny old town (you can cross it in five minutes), photograph the castle from across the river, and walk the Topiary Park — largest in Europe, ~€5. Grab an Ardennes jam or a coffee on the square. Skip the little tourist train (it runs 30–40 min and would eat your window)."}, {"title": "🏰 Dinant in ~1.5 hr", "body": "Cable car up to the citadel (~40 min for the Meuse views and WWI exhibits — same price as the 408 steps), then the church and saxophone bridge below. Buy tickets on the spot and do the citadel first. Prefer not to climb? A relaxed riverside loop (church, saxophones, Sax museum) fills 1.5 hr on its own. Treat: a couque de Dinant."}], "eat": [{"cat": "🍽 Lunch", "rec": "On the square in Durbuy or Dinant", "notes": "Tartines, trout, Ardennes ham"}, {"cat": "🍪 Treat", "rec": "Couque de Dinant", "notes": "Rock‑hard honey biscuit — a local curiosity"}, {"cat": "🍽 Dinner", "rec": "Brasserie Alfa (hotel)", "notes": "French & Luxembourgish; easy after travel"}], "foods": [{"name": "Ardennes ham", "desc": "Air‑dried, smoky cured ham from the Belgian Ardennes — perfect with bread en route."}, {"name": "Couque de Dinant", "desc": "Dinant’s rock‑hard honey biscuit pressed in carved molds — a local curiosity."}, {"name": "Judd mat Gaardebounen", "desc": "Luxembourg’s national dish — smoked pork collar with broad beans; a great arrival dinner."}], "good": {"photo": "Durbuy from the river bridge; Dinant’s church + citadel from the far bank", "coffee": "Cafe on Durbuy’s main square", "restrooms": "Cafes/restaurants at each stop (tip the attendant if asked)", "rainy": "Both stops still work under an umbrella; citadel has indoor sections", "packing": "Keep a small day bag handy; main luggage stays in the car."}}, {"n": 6, "weekday": "Wednesday", "date": "July 15", "iso": "2026-07-15", "short": "Wed, Jul 15", "headline": "Trier — Roman Day Trip", "subtitle": "Germany's oldest city — 'Rome of the North'", "overview": "A full day across the border in Trier, the 'Rome of the North' — a dense cluster of Roman UNESCO monuments: the towering Porta Nigra gate, the Imperial Baths, the amphitheater and Constantine's throne hall, plus one of Germany's great Roman museums. A direct hourly train from Luxembourg City (~50 min) makes it an easy round trip, with a bratwurst and a German beer on the Hauptmarkt in the middle. (Vianden is dropped this time to give the Roman sights a full, unhurried day.)", "weather": "Trier ~24–26°C / high-70s°F · sunny — the better-weather day", "walking": "~6–7 km around a compact, very walkable old town", "transport": "Direct regional train Luxembourg City ⇄ Trier Hbf (~50 min, ~hourly)", "schedule": [{"time": "9:00", "plan": "Train Luxembourg City → Trier Hbf (~50 min)"}, {"time": "10:00", "plan": "Porta Nigra — buy the AntikenCard here for the Roman sites"}, {"time": "10:45", "plan": "Rheinisches Landesmuseum — mosaics, sculpture & the Trier Gold Hoard"}, {"time": "12:00", "plan": "Hauptmarkt: lunch — bratwurst & a German beer"}, {"time": "1:15", "plan": "Trier Cathedral (Dom) & Liebfrauenkirche"}, {"time": "2:00", "plan": "Konstantin-Basilika (Aula Palatina) — Constantine's throne hall"}, {"time": "2:45", "plan": "Amphitheater — the arena & gladiators' cellar (your 2nd Basic-card monument)"}, {"time": "4:00", "plan": "Optional extras: the Imperial or Forum Baths, the Roman Bridge, or free time & Moselle wine on the square"}, {"time": "~6:15", "plan": "Train Trier → Luxembourg City (~50 min)"}, {"time": "Evening", "plan": "Dinner back in Luxembourg"}], "tour": {"intro": "Trier's Roman monuments and museum, all in a compact, walkable old town. Tap any name for the map.", "stops": [{"name": "Porta Nigra", "url": "https://www.google.com/maps/search/?api=1&query=Porta%20Nigra%20Trier", "address": "Porta-Nigra-Platz, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Porta%20Nigra%20Trier", "desc": "The colossal blackened Roman city gate (c. 170 AD) — the best-preserved Roman gate north of the Alps and Trier's symbol. Climb inside for the galleries and views. Buy your AntikenCard here as your first stop; the old town runs south from the gate."}, {"name": "Ditsch pretzel stop (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Ditsch%20Brezelbackerei%20Simeonstrasse%2040%20Trier", "address": "Simeonstraße 40, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Ditsch%20Brezelbackerei%20Simeonstrasse%2040%20Trier", "desc": "A dedicated pretzel bakery on Simeonstraße — the pedestrian street between the Porta Nigra and the Hauptmarkt, so it's right on your walk. Grab a fresh, warm Brezel to snack on between the Roman sites."}, {"name": "Rheinisches Landesmuseum", "url": "https://www.google.com/maps/search/?api=1&query=Rheinisches%20Landesmuseum%20Trier", "address": "Weimarer Allee 1, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Rheinisches%20Landesmuseum%20Trier", "desc": "One of Germany's great Roman archaeology museums — mosaics, sculpture, everyday objects, reconstructed models, and the dazzling Trier Gold Hoard (~11.5 kg, one of Europe's largest Roman gold finds). Turns the ruins into a coherent story. Tue–Sun 10–5; free with the AntikenCard."}, {"name": "Hauptmarkt (Main Market Square)", "url": "https://www.google.com/maps/search/?api=1&query=Hauptmarkt%20Trier", "address": "Hauptmarkt, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Hauptmarkt%20Trier", "desc": "Trier's lively medieval heart — St. Peter's Fountain, gabled houses and cafes. The place to break for a bratwurst and a German beer (or a Moselle Riesling) before the afternoon's Roman sites."}, {"name": "Trier Cathedral (Dom) & Liebfrauenkirche", "url": "https://www.google.com/maps/search/?api=1&query=Trier%20Cathedral%20Dom%20St%20Peter", "address": "Liebfrauenstraße 12, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Trier%20Cathedral%20Dom%20St%20Peter", "desc": "Germany's oldest cathedral, built around a Roman core, standing beside the early-Gothic Church of Our Lady — both part of the UNESCO ensemble. Free to step inside; the Roman foundations underneath are part of what earned the listing."}, {"name": "Konstantin-Basilika (Aula Palatina)", "url": "https://www.google.com/maps/search/?api=1&query=Konstantin%20Basilika%20Trier", "address": "Konstantinplatz 10, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Konstantin%20Basilika%20Trier", "desc": "The vast 4th-century Roman throne hall of Emperor Constantine — an astonishing single brick-walled room, now a church, and one of the largest surviving Roman interiors anywhere. Free to enter."}, {"name": "Amphitheater", "url": "https://www.google.com/maps/search/?api=1&query=Amphitheater%20Trier", "address": "Olewiger Str. 25, 54295 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Amphitheater%20Trier", "desc": "Built around 100 AD and once seating up to 20,000, this is where gladiators and animal hunts drew the crowds. Descend into the arena and the gladiators' cellar beneath the stage. Free with the AntikenCard."}, {"name": "Roman Bridge (Römerbrücke) (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Romerbrucke%20Roman%20Bridge%20Trier", "address": "Römerbrücke, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Romerbrucke%20Roman%20Bridge%20Trier", "desc": "The oldest bridge in Germany — its dark stone piers are Roman (2nd century) and still carry traffic today. Free to walk across; a quick add if you have time before the train."}, {"name": "Karl-Marx-Haus (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Karl%20Marx%20House%20Trier", "address": "Brückenstraße 10, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Karl%20Marx%20House%20Trier", "desc": "The Baroque townhouse where Karl Marx was born in 1818, now a museum on his life and legacy — optional, for anyone curious."}, {"name": "Kaiserthermen (Imperial Baths) (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Kaiserthermen%20Trier", "address": "Weberbach 41, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Kaiserthermen%20Trier", "desc": "Among the largest bath complexes in the Roman Empire — towering walls and a warren of underground service tunnels you can walk. Not on the Basic AntikenCard (it's a Premium-card monument), so it's a pay-extra or skip on your plan; worth it if you have time and energy left."}, {"name": "Thermen am Viehmarkt (Forum Baths) (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Thermen%20am%20Viehmarkt%20Trier", "address": "Viehmarktplatz, 54290 Trier", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Thermen%20am%20Viehmarkt%20Trier", "desc": "Roman bath ruins from the 1st–4th c. AD, preserved under a modern glass pavilion in the old town. Like the Kaiserthermen, it's a Premium-card monument — not on the Basic card — so treat it as an optional extra."}]}, "callouts": [{"title": "🎟️ AntikenCard — the smart Roman ticket", "body": "A combined ticket bundles the Roman monuments with the Rheinisches Landesmuseum, cheaper than paying per site (~€6 each). Basic ~€12 covers two monuments + the museum; Premium ~€18 covers all four monuments + the museum. On the Basic card, do Porta Nigra + the Amphitheater plus the museum — the two bath complexes (Kaiserthermen, Thermen am Viehmarkt) need the Premium card or a separate ticket, so they're the optional extras. Buy at the Porta Nigra as your first stop. Bonus: through 9 Aug 2026, under-18s get in free."}, {"title": "🚆 Getting there", "body": "Direct trains run Luxembourg City → Trier Hbf about hourly, ~50 min. Bring your passport (Schengen). Luxembourg's free transport stops at the border, so buy a cheap ticket for the German stretch. From Trier Hbf the old town is a ~10-min walk via the Porta Nigra."}, {"title": "🌭 Lunch on the Hauptmarkt", "body": "Break mid-day on the market square for a bratwurst and a German beer (or a Moselle Riesling). For a proper brewpub with a beer garden, Altes Brauhaus is a short walk out in Heiligkreuz."}, {"title": "🏛️ Full day, no rush", "body": "The headline Roman monuments fit comfortably in one full day. Group them by area — Porta Nigra, museum and cathedral in the centre, then the Imperial Baths and amphitheater to the southeast. Two days would let you add the Barbara Baths and Forum Baths, but you won't feel short-changed in one."}], "eat": [{"cat": "🌭 Bratwurst & beer", "rec": "Bitburger Wirtshaus (near the Hauptmarkt)", "notes": "The local-brewery tavern — classic sit-down bratwurst with a German beer on tap"}, {"cat": "🍽 Traditional alternative", "rec": "Zum Domstein, on the Hauptmarkt", "notes": "Old-school German fare on the square (with a Roman-recipe cellar)"}, {"cat": "🥨 Pretzel", "rec": "Ditsch (Brezelbäckerei), Simeonstraße 40", "notes": "Fresh Brezeln on the Porta Nigra–Hauptmarkt street — quick & cheap"}, {"cat": "🍷 If you'd rather wine", "rec": "Moselle Riesling", "notes": "Trier is a Mosel wine capital — crisp local whites everywhere"}], "foods": [{"name": "Bratwurst", "desc": "Grilled German sausage — the thing to order, with mustard and a bun or potatoes."}, {"name": "Moselle Riesling", "desc": "Trier is a Mosel wine capital — light, crisp, aromatic whites if you'd rather a glass than a beer."}, {"name": "Flammkuchen", "desc": "A thin, crispy tart with crème fraîche, onion and bacon — common across this border region."}, {"name": "Brezel (pretzel)", "desc": "A fresh soft pretzel from a Hauptmarkt bakery — the easy Roman-sightseeing snack."}], "good": {"photo": "The Porta Nigra; the amphitheater arena; the Hauptmarkt fountain", "coffee": "A Hauptmarkt terrace", "restrooms": "The museum, monuments, Hauptmarkt and station (some paid)", "rainy": "It's the good-weather day — but the Landesmuseum, cathedral and Constantine Basilica are all indoors if a shower blows through.", "packing": "Passport for Germany, comfortable shoes, water and a hat for the open amphitheater and baths."}}, {"n": 7, "weekday": "Thursday", "date": "July 16", "iso": "2026-07-16", "short": "Thu, Jul 16", "headline": "Luxembourg City", "subtitle": "Casemates, the Corniche & the Grund", "overview": "A dramatic capital built across gorges and ramparts. The old town and fortifications are UNESCO‑listed and walkable, and — wonderfully — all public transport in the country is free, so the funiculars, lifts and buses cost nothing.", "weather": "July avg ~24°C / 75°F", "walking": "~5–6 km with some stairs/hills", "transport": "All free: trams, buses, the Pfaffenthal lift & funicular", "schedule": [{"time": "9:00", "plan": "Place d’Armes & old town"}, {"time": "9:45", "plan": "Grand Ducal Palace & Notre‑Dame"}, {"time": "11:00", "plan": "Bock Casemates"}, {"time": "12:30", "plan": "Chemin de la Corniche viewpoint"}, {"time": "1:00", "plan": "Lunch"}, {"time": "Afternoon", "plan": "Down to the Grund; Pfaffenthal panoramic lift"}, {"time": "Evening", "plan": "Dinner in the old town"}], "tour": {"intro": "A loop around the Ville Haute (upper town) and its balconies over the valley. Free lifts handle the climbs.", "stops": [{"name": "Place d’Armes", "url": "https://www.google.com/maps/search/?api=1&query=Place%20d'Armes%20Luxembourg%20City", "address": "Place d’Armes, 1136 Luxembourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Place%20d'Armes%20Luxembourg%20City", "desc": "The lively cafe‑ringed heart of the old town and a good orientation point a short walk from the hotel/station."}, {"name": "Grand Ducal Palace", "url": "https://www.google.com/maps/search/?api=1&query=Grand%20Ducal%20Palace%20Luxembourg", "address": "17 Rue du Marché‑aux‑Herbes, 1728 Luxembourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Grand%20Ducal%20Palace%20Luxembourg", "desc": "The town residence of the Grand Duke, with a Flemish‑Renaissance facade and ceremonial guards. Summer guided tours of the interior run — check times."}, {"name": "Notre‑Dame Cathedral", "url": "https://www.google.com/maps/search/?api=1&query=Notre-Dame%20Cathedral%20Luxembourg", "address": "Rue Notre‑Dame, 2240 Luxembourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Notre-Dame%20Cathedral%20Luxembourg", "desc": "A graceful 17th‑century church mixing late‑Gothic and Renaissance, with a crypt of the Grand Ducal family guarded by bronze lions."}, {"name": "Place de la Constitution (Gëlle Fra)", "url": "https://www.google.com/maps/search/?api=1&query=Place%20de%20la%20Constitution%20Luxembourg", "address": "Place de la Constitution, 1135 Luxembourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Place%20de%20la%20Constitution%20Luxembourg", "desc": "The golden “Gëlle Fra” war‑memorial statue stands on the rampart edge with a sweeping view over the Adolphe Bridge and the Pétrusse valley."}, {"name": "Bock Casemates", "url": "https://www.google.com/maps/search/?api=1&query=Bock%20Casemates%20Luxembourg", "address": "10 Montée de Clausen, 1343 Luxembourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Bock%20Casemates%20Luxembourg", "desc": "A honeycomb of cliff tunnels carved into the rock since 1644 — the cradle of the city. Bring a layer; it’s cool and a bit steep inside. Allow ~1 hour."}, {"name": "Chemin de la Corniche", "url": "https://www.google.com/maps/search/?api=1&query=Chemin%20de%20la%20Corniche%20Luxembourg", "address": "Chemin de la Corniche, 1945 Luxembourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Chemin%20de%20la%20Corniche%20Luxembourg", "desc": "Called “the most beautiful balcony in Europe” — a rampart promenade looking down on the Grund’s red roofs and the river. The signature Luxembourg view."}, {"name": "The Grund (lower town)", "url": "https://www.google.com/maps/search/?api=1&query=Grund%20Luxembourg", "address": "Grund, 1645 Luxembourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Grund%20Luxembourg", "desc": "Descend (walk or take the free Pfaffenthal/Grund lift) into the riverside quarter of old stone houses and pubs along the Alzette — a complete change of scene below the cliffs."}, {"name": "Knídler market, Place Guillaume II (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Place%20Guillaume%20II%20Luxembourg%20City", "address": "Place Guillaume II, Luxembourg City", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Place%20Guillaume%20II%20Luxembourg%20City", "desc": "Type: open-air produce, flowers & local-food market — the twice-weekly 'Knídler'. Runs Wed & Sat mornings — runs Wed & Sat mornings. Impact: none — Place Guillaume II is central, already on your old-town loop by the palace and city hall."}, {"name": "Luxembourg House (optional — local crafts)", "url": "https://www.google.com/maps/search/?api=1&query=Luxembourg%20House%202%20Rue%20de%20l%27Eau%20Luxembourg%20City", "address": "2 Rue de l'Eau, Luxembourg City", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Luxembourg%20House%202%20Rue%20de%20l%27Eau%20Luxembourg%20City", "desc": "A concept store for authentic Luxembourg-made goods — textiles, pottery, design pieces and quality souvenirs — on Rue de l'Eau, right in the old-town core on your loop. The best single stop for locally crafted gifts rather than generic souvenirs."}, {"name": "Rue Philippe II (optional — luxury mile)", "url": "https://www.google.com/maps/search/?api=1&query=Rue%20Philippe%20II%20Luxembourg%20City", "address": "Rue Philippe II, Luxembourg City", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Rue%20Philippe%20II%20Luxembourg%20City", "desc": "Luxembourg's luxury shopping street, a couple of minutes off Place d'Armes/Grand-Rue — fashion, jewellery and high-end boutiques. A quick browse if anyone wants to splurge; central and easy to fold in."}, {"name": "Villeroy & Boch — The House (optional — porcelain)", "url": "https://www.google.com/maps/search/?api=1&query=Villeroy%20Boch%202%20rue%20du%20Fosse%20Luxembourg%20City", "address": "2 rue du Fossé, Luxembourg City", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Villeroy%20Boch%202%20rue%20du%20Fosse%20Luxembourg%20City", "desc": "The famous porcelain maker with deep Luxembourg roots — its first pattern, 'Vieux Luxembourg,' dates to 1745. The central shop at 2 rue du Fossé shows the full collections, open Mon–Sat 10–6, so your Thursday works. Worth a look for a distinctive Luxembourg-made gift."}]}, "callouts": [{"title": "🛍️ Optional — pharmacy & chocolate", "body": "Not a big shopping city, so travel light here. If you want: European pharmacy skincare (Avène, La Roche-Posay, Bioderma, Nuxe, Eucerin) often runs cheaper than in the US, and Luxlait chocolate plus Belgian/Luxembourg brands are easy finds at a Cactus or Auchan supermarket. Save the serious hauls for Strasbourg (beauty) and Zürich (chocolate)."}], "eat": [{"cat": "🍽 Lunch", "rec": "Brasserie Guillaume or Um Dierfgen", "notes": "Judd mat Gaardebounen (smoked pork) — the national dish"}, {"cat": "☕ Coffee/Pastry", "rec": "Oberweis (Grand‑Rue 16)", "notes": "Beloved patisserie — try the pastries"}, {"cat": "🍷 Wine", "rec": "A glass of Moselle Riesling", "notes": "Luxembourg’s crisp white"}, {"cat": "🍽 Dinner (special)", "rec": "Clairefontaine or Mosconi (Grund)", "notes": "Michelin‑level — reserve ahead"}], "foods": [{"name": "Judd mat Gaardebounen", "desc": "Smoked pork collar with broad beans in a creamy sauce — the national dish."}, {"name": "Gromperekichelcher", "desc": "Crispy fried potato fritters with onion and parsley — a beloved street snack."}, {"name": "Bouneschlupp", "desc": "Hearty green‑bean soup with potatoes and sausage — simple Luxembourg comfort food."}, {"name": "Moselle Riesling", "desc": "Crisp white wine (and excellent Crémant sparkling) from the nearby Moselle valley."}], "good": {"photo": "Corniche over the Grund; Gëlle Fra with the valley; the palace facade", "coffee": "Oberweis; Konrad Café", "restrooms": "Place d’Armes, museums, casemates entrance", "rainy": "MUDAM modern‑art museum, Luxembourg City History Museum, the casemates", "packing": "A layer for the cool casemate tunnels; shoes with grip for ramp/stairs."}}, {"n": 8, "weekday": "Friday", "date": "July 17", "iso": "2026-07-17", "short": "Fri, Jul 17", "headline": "Private Driver — Luxembourg → Strasbourg", "subtitle": "Haut‑Kœnigsbourg & Colmar en route", "overview": "A spectacular transfer through the Vosges into Alsace: a mountaintop fortress and the fairy‑tale canals of Colmar before checking into your Strasbourg base. (Full details in Confirmed Tours & Private Drivers.)", "weather": "July avg ~26°C / 79°F · cooler at the castle", "walking": "Moderate — castle ramparts; Colmar strolling", "transport": "Private driver (booked), door to door", "schedule": [{"time": "9:45", "plan": "Bags down, lobby of Marriott Alfa"}, {"time": "10:00", "plan": "Private driver pickup"}, {"time": "~11:30", "plan": "Château du Haut‑Kœnigsbourg (~1.5 hr)"}, {"time": "~2:30", "plan": "Colmar — ‘La Petite Venise’ (~2.5 hr)"}, {"time": "Evening", "plan": "Arrive Maison Rouge, Strasbourg"}, {"time": "Dinner", "plan": "Winstub near Place Kléber"}, {"time": "Payment", "plan": "agreed fare + deposit"}, {"time": "Driver", "plan": "______________  ☎ ____________"}], "tour": {"intro": "A mountaintop fortress, then fairy-tale Colmar — both with your driver. Tap any name for the map.", "stops": [{"name": "Château du Haut-Kœnigsbourg", "url": "https://www.google.com/maps/search/?api=1&query=Chateau%20du%20Haut-Koenigsbourg%20Orschwiller", "address": "67600 Orschwiller, France", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Chateau%20du%20Haut-Koenigsbourg%20Orschwiller", "desc": "A vast medieval fortress at 757 m, ruined for centuries then grandly restored (1900–08) by Kaiser Wilhelm II. Walk the ramparts, keep and drawbridge, and take in the sweeping panorama over the Alsace plain — the Black Forest and even the Alps on a clear day. Allow ~1–1.5 hr; ~€10, buy on arrival. It's cooler up top, so bring a layer."}, {"transit": true, "name": "Haut-Kœnigsbourg → Colmar (with your driver)", "url": "https://www.google.com/maps/search/?api=1&query=Colmar%20old%20town%20France", "desc": "About 30 minutes down from the Vosges foothills into the Alsace plain and Colmar — an easy hop with your driver."}, {"name": "La Petite Venise (Little Venice), Colmar", "url": "https://www.google.com/maps/search/?api=1&query=La%20Petite%20Venise%20Colmar", "address": "Quai de la Poissonnerie, 68000 Colmar", "addressUrl": "https://www.google.com/maps/search/?api=1&query=La%20Petite%20Venise%20Colmar", "desc": "Colmar's postcard corner — candy-coloured half-timbered houses leaning over a canal. Wander the quays, or take a flat-bottomed boat ride for the classic view. Loveliest in late-afternoon light."}, {"name": "Colmar Old Town (Maison Pfister & Koïfhus)", "url": "https://www.google.com/maps/search/?api=1&query=Maison%20Pfister%20Colmar", "address": "11 Rue des Marchands, 68000 Colmar", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Maison%20Pfister%20Colmar", "desc": "The heart of Colmar — the ornate 1537 Maison Pfister, the old Koïfhus customs house, and the fishmongers' Quai de la Poissonnerie, all along cobbled, flower-lined Rue des Marchands. Pure Alsatian storybook."}, {"name": "Marché Couvert (Covered Market)", "url": "https://www.google.com/maps/search/?api=1&query=Marche%20Couvert%20Colmar%20rue%20des%20Ecoles", "address": "13 Rue des Écoles, 68000 Colmar", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Marche%20Couvert%20Colmar%20rue%20des%20Ecoles", "desc": "A beautiful 1865 brick-and-iron market hall of ~20 Alsatian producers — cheese, charcuterie, foie gras, bakery and wine. Open Tue–Sun (closed Mon), so your Friday stop works. A short walk from Petite Venise — a great grazing lunch."}]}, "callouts": [{"title": "🏰 Haut-Kœnigsbourg in ~1.5 hr", "body": "Walk the ramparts, keep and drawbridge, and soak up the panorama over the Alsace plain — the Black Forest and even the Alps on a clear day. Entry ~€10, buy on arrival. It's cool at 757 m, so bring a layer even in July."}, {"title": "🥨 Colmar in ~2.5 hr", "body": "Wander the old town (Maison Pfister, the Koïfhus, Rue des Marchands), drift through La Petite Venise, browse the covered market, and lunch on a canal terrace with a glass of Alsace Riesling."}], "eat": [{"cat": "🍽 Lunch (Colmar)", "rec": "A winstub on the canals", "notes": "Tarte flambée, Alsatian wine"}, {"cat": "🍷 Wine", "rec": "Riesling or Gewürztraminer", "notes": "You’re on the Alsace wine route"}, {"cat": "🍽 Dinner (Strasbourg)", "rec": "Chez Yvonne or Maison Kammerzell", "notes": "Classic winstub fare"}], "foods": [{"name": "Tarte flambée", "desc": "Alsace’s thin, crackly ‘flammekueche’ with crème fraîche, onion and lardons — perfect lunch in Colmar."}, {"name": "Bretzel", "desc": "The soft Alsatian pretzel — a good snack on the road."}, {"name": "Kougelhopf", "desc": "Fluted ring cake with raisins and almonds — sweet, or savory as an aperitif."}, {"name": "Alsace wine", "desc": "Aromatic Riesling and Gewürztraminer from the villages you pass on the wine route."}], "good": {"photo": "Haut‑Kœnigsbourg ramparts; Colmar’s Petite Venise canal", "coffee": "Cafe on a Colmar square", "restrooms": "Castle entrance, Colmar car parks & cafes", "rainy": "Castle interior + Colmar's covered market cover a wet day", "packing": "Layer for the castle; tomorrow you cross into Switzerland."}}, {"n": 9, "weekday": "Saturday", "date": "July 18", "iso": "2026-07-18", "short": "Sat, Jul 18", "headline": "Strasbourg", "subtitle": "Cathedral, Petite France & a Batorama cruise", "overview": "The capital of Alsace is made for walking: a soaring pink cathedral, the canal‑laced Petite France quarter, and a relaxing boat loop that ties it all together. Everything is within a tight, mostly‑pedestrian centre.", "weather": "July avg ~26°C / 79°F", "walking": "~5–6 km, flat", "transport": "All on foot from the hotel; trams if needed", "schedule": [{"time": "9:00", "plan": "Strasbourg Cathedral (early = fewer crowds) & Maison Kammerzell"}, {"time": "10:00", "plan": "Palais Rohan & the Batorama boat cruise (~70 min, departs alongside)"}, {"time": "11:30", "plan": "Stroll west along the Ill to La Petite France"}, {"time": "12:30", "plan": "Ponts Couverts & Barrage Vauban — the furthest point"}, {"time": "1:00", "plan": "Lunch in Petite France — tarte flambée"}, {"time": "2:30", "plan": "Work back east to Place Kléber + the beauty loop (pharmacy, Monoprix, KIKO)"}, {"time": "Evening", "plan": "Dinner in a winstub"}, {"time": "~9:15", "plan": "Golden hour: stroll to the Barrage Vauban terrace & Ponts Couverts for sunset over Petite France (sun sets ~9:25 PM in July)"}], "tour": {"intro": "A clean loop from Maison Rouge: the cathedral quarter first (before the crowds), then west along the Ill to Petite France and the Barrage Vauban — your furthest point — looping back via Place Kléber and the shopping street to finish near the hotel. Tap any name for the map.", "stops": [{"name": "Strasbourg Cathedral (Notre‑Dame)", "url": "https://www.google.com/maps/search/?api=1&query=Strasbourg%20Cathedral", "address": "Place de la Cathédrale, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Strasbourg%20Cathedral", "desc": "A masterpiece of Gothic in rose sandstone — for centuries the tallest building in the world. See the astronomical clock (daily show ~12:30) and climb the 332‑step platform for the view. ~5 min from the hotel."}, {"name": "Maison Kammerzell", "url": "https://www.google.com/maps/search/?api=1&query=Maison%20Kammerzell%20Strasbourg", "address": "16 Place de la Cathédrale, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Maison%20Kammerzell%20Strasbourg", "desc": "The most ornate medieval house in the city, all carved timber and leaded glass, right on the cathedral square — now a restaurant."}, {"name": "Longchamp ⭐ (optional — top buying pick)", "url": "https://www.google.com/maps/search/?api=1&query=Longchamp%2017%20rue%20du%20Dome%20Strasbourg", "address": "17 rue du Dôme, 67000 Strasbourg (steps from the Cathedral)", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Longchamp%2017%20rue%20du%20Dome%20Strasbourg", "desc": "The #1 buying destination on this trip: French pricing, an excellent chance of seasonal colours, far less crowded than Paris, and staff who tend to know the current collections well. Right by the Cathedral. Note: closed Sundays — so shop on your full Strasbourg day (Sat Jul 18), since you leave Sunday morning."}, {"name": "Palais Rohan", "url": "https://www.google.com/maps/search/?api=1&query=Palais%20Rohan%20Strasbourg", "address": "2 Place du Château, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Palais%20Rohan%20Strasbourg", "desc": "An 18th‑century episcopal palace on the river housing three museums (fine arts, decorative arts, archaeology). The Batorama boats depart from the quay just beside it."}, {"name": "Batorama Boat Cruise", "url": "https://www.google.com/maps/search/?api=1&query=Batorama%20Strasbourg%20embarcadere%20Palais%20Rohan", "address": "2 Place du Marché‑aux‑Poissons, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Batorama%20Strasbourg%20embarcadere%20Palais%20Rohan", "desc": "A 70‑minute glass‑roofed cruise that loops from the old town through the locks to the modern European quarter — the easiest way to see it all. Book online for a set time or buy at the quay; ~€16."}, {"name": "Saturday Alsatian market — Marché aux Poissons (optional)", "url": "https://www.google.com/maps/search/?api=1&query=Place%20du%20Vieux%20Marche%20aux%20Poissons%20Strasbourg", "address": "Place du Vieux Marché aux Poissons, 67000 Strasbourg (by the Cathedral)", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Place%20du%20Vieux%20Marche%20aux%20Poissons%20Strasbourg", "desc": "Type: Alsatian farm & regional produce market (cheese, charcuterie, foie gras, flowers). Saturday mornings ~7am–1pm — aligns with your Saturday in Strasbourg. Impact: low — steps from the Cathedral, right on your old-town loop. Bonus: a collectibles/flea market also runs Wed & Sat (7am–4pm) nearby around Place de l'Étal."}, {"name": "La Petite France", "url": "https://www.google.com/maps/search/?api=1&query=La%20Petite%20France%20Strasbourg", "address": "Petite France, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=La%20Petite%20France%20Strasbourg", "desc": "The dreamy old tanners’ quarter — timber houses leaning over canals, flower boxes and water locks. Save it for late afternoon light, then settle in for dinner."}, {"name": "Ponts Couverts & Barrage Vauban", "url": "https://www.google.com/maps/search/?api=1&query=Ponts%20Couverts%20Strasbourg", "address": "Ponts Couverts, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Ponts%20Couverts%20Strasbourg", "desc": "Medieval defensive towers and covered bridges; climb to the free panoramic terrace atop the Vauban dam for the postcard view back over Petite France."}, {"name": "Place Kléber", "url": "https://www.google.com/maps/search/?api=1&query=Place%20Kleber%20Strasbourg", "address": "Place Kléber, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Place%20Kleber%20Strasbourg", "desc": "The grand central square beside your hotel, framed by the Aubette and lined with shops — the city’s natural meeting point."}, {"name": "Pharmacie de l'Homme de Fer (French pharmacy haul)", "url": "https://www.google.com/maps/search/?api=1&query=Pharmacie%20de%20l%27Homme%20de%20Fer%202%20Place%20de%20l%27Homme%20de%20Fer%20Strasbourg", "address": "2 Place de l'Homme de Fer, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Pharmacie%20de%20l%27Homme%20de%20Fer%202%20Place%20de%20l%27Homme%20de%20Fer%20Strasbourg", "desc": "One of Strasbourg's biggest pharmacies, with a large parapharmacy/dermocosmetics section and frequent promos — a ~6–8 min walk from Maison Rouge. Open Mon–Sat 8:30–19:30; staff speak English and German. The French-pharmacy classics: La Roche-Posay Anthelios sunscreen, Avène, Bioderma, Nuxe, Caudalie, Uriage, SVR, Embryolisse (and A313 if in stock). Ask 'Où se trouve la parapharmacie?' and look for multipacks or lots promotionnels before buying singles."}, {"name": "Pharmacie Kléber (optional — alternative)", "url": "https://www.google.com/maps/search/?api=1&query=Pharmacie%20Kleber%2049%20Rue%20du%2022%20Novembre%20Strasbourg", "address": "49 Rue du 22 Novembre, 67000 Strasbourg (by Place Kléber)", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Pharmacie%20Kleber%2049%20Rue%20du%2022%20Novembre%20Strasbourg", "desc": "A big, central parapharmacy right by Place Kléber, English spoken, low parapharmacy prices — carries the same major derm brands (Avène, La Roche-Posay, Bioderma, Nuxe, Caudalie, Uriage). A convenient alternative if the Homme de Fer is out of something; you don't need both."}, {"name": "Monoprix (Homme de Fer)", "url": "https://www.google.com/maps/search/?api=1&query=Monoprix%20Homme%20de%20Fer%20Strasbourg", "address": "Place de l'Homme de Fer / Rue du 22 Novembre, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Monoprix%20Homme%20de%20Fer%20Strasbourg", "desc": "France's answer to Target, by Place de l'Homme de Fer — drugstore make-up (Bourjois Healthy Mix), groceries and edible French souvenirs (Bonne Maman flavours, Alsatian treats). Handy for last-minute beauty bits to round out the loop."}, {"name": "KIKO Milano (Grandes Arcades)", "url": "https://www.google.com/maps/search/?api=1&query=KIKO%20Milano%2020%20Rue%20des%20Grandes%20Arcades%20Strasbourg", "address": "20 Rue des Grandes Arcades, 67000 Strasbourg", "addressUrl": "https://www.google.com/maps/search/?api=1&query=KIKO%20Milano%2020%20Rue%20des%20Grandes%20Arcades%20Strasbourg", "desc": "Affordable Italian make-up — mascara, skin tints, lip oils, cream blush — often well under US prices. Use THIS central branch on Rue des Grandes Arcades (a short walk from the hotel), not the Rivétoile mall store east of the centre. Open into the evening, incl. Saturday."}]}, "callouts": [{"title": "🧴 French pharmacy — your big beauty stop", "body": "Strasbourg is the place to load up on French skincare, usually well under US prices. Hit the Pharmacie de l'Homme de Fer for La Roche-Posay sunscreen, Avène, Bioderma, Nuxe, Caudalie, Embryolisse and more — ask for the parapharmacie and check the lots promotionnels. Since this is your last full day in the EU, keep receipts for the VAT refund, validated at the France→Switzerland border tomorrow (see the VAT note below). Your checked bag handles the liquids."}, {"title": "💄 The 2-hour beauty loop", "body": "Three stops in a tight cluster on/around Rue des Grandes Arcades, all a short walk from Maison Rouge: Pharmacie de l'Homme de Fer (French skincare, 45–60 min) → KIKO Milano at 20 Grandes Arcades (Italian make-up, 20–30 min) → Monoprix (Bourjois + food souvenirs, 20–30 min). Use the central KIKO, not the Rivétoile mall branch. For Alsatian jam, Galeries Lafayette on Rue du 22 Novembre stocks Christine Ferber. Note: you don't need multiple pharmacies — the Homme de Fer (or Kléber) stocks all the big derm brands; only A313 availability varies."}, {"title": "🧾 VAT refund — plan ahead", "body": "This is your last full day in the EU. If you've bought big-ticket items, you can reclaim VAT — but you must get customs export validation when you leave the EU, which happens at the France→Switzerland border tomorrow. Keep receipts + forms together and ready. See Emergency Information."}], "eat": [{"cat": "🍽 Lunch", "rec": "Le Tire‑Bouchon or Au Brasseur", "notes": "Tarte flambée (flammekueche) — budget–mid"}, {"cat": "🍽 Dinner", "rec": "Chez Yvonne / Maison Kammerzell", "notes": "Choucroute, baeckeoffe — winstub classics"}, {"cat": "🍰 Pastry", "rec": "Pâtisserie Christian", "notes": "Kougelhopf and Alsatian cakes"}, {"cat": "☕ Coffee", "rec": "Café Bretelles", "notes": "Strong local roaster"}, {"cat": "🍽 Special", "rec": "Au Crocodile", "notes": "Michelin dining — reserve well ahead"}], "foods": [{"name": "Choucroute garnie", "desc": "Wine‑braised sauerkraut piled with sausages and smoked pork — the Alsatian feast."}, {"name": "Baeckeoffe", "desc": "A slow‑baked casserole of marinated meats and potatoes in a sealed clay pot."}, {"name": "Tarte flambée", "desc": "Order it the local way — sweet versions (apple, cinnamon) make a fine dessert too."}, {"name": "Munster cheese", "desc": "Pungent washed‑rind cheese from the Vosges, often with cumin."}, {"name": "Bretzel & Crémant d’Alsace", "desc": "A pretzel and a glass of Alsatian sparkling — the easy aperitif."}], "good": {"photo": "Petite France canals; cathedral facade & spire; view from the Barrage Vauban terrace; sunset from the Barrage Vauban terrace (~9:15–9:30 PM)", "coffee": "Café Bretelles; Oh My Goodness", "restrooms": "Cathedral square, Palais Rohan, Petite France (some paid)", "rainy": "Palais Rohan museums; the covered Batorama boat runs rain or shine", "packing": "Reusable water bottle; it’s the warmest stretch of the trip."}}, {"n": 10, "weekday": "Sunday", "date": "July 19", "iso": "2026-07-19", "short": "Sun, Jul 19", "headline": "Private Driver → Zurich + First Look", "subtitle": "Cross into Switzerland · afternoon in the old town", "overview": "A short, scenic transfer brings you into Switzerland. After checking in, ease into Zurich on foot — the Bahnhofstrasse, the lake, and the twin‑church old town are all a few minutes apart. Note: shops are largely closed on Sundays, but sights, cafes and the lakefront are open.", "weather": "July avg ~24°C / 75°F", "walking": "~4 km, easy with a couple of gentle hills", "transport": "Private driver (booked) Strasbourg → Zurich (~2–2.5 hr)", "schedule": [{"time": "9:45", "plan": "Bags down, lobby of Maison Rouge"}, {"time": "10:00", "plan": "Private driver pickup; FR→CH border crossing"}, {"time": "~12:30", "plan": "Arrive Zurich Marriott; check in / drop bags"}, {"time": "1:30", "plan": "Lunch near the river"}, {"time": "2:30", "plan": "Old town walk (below)"}, {"time": "5:30", "plan": "Lake Zurich promenade"}, {"time": "Evening", "plan": "Dinner — Zürcher Geschnetzeltes"}], "tour": {"intro": "A loop from the Marriott: head south down Bahnhofstrasse to the lake — your furthest point — then cross the Limmat and come back up the Niederdorf old-town side of the river to the hotel. Tap any name for the map.", "stops": [{"name": "Bahnhofstrasse", "url": "https://www.google.com/maps/search/?api=1&query=Bahnhofstrasse%20Zurich", "address": "Bahnhofstrasse, 8001 Zürich", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Bahnhofstrasse%20Zurich", "desc": "Switzerland’s famous shopping boulevard running from the main station to the lake (windows only on Sundays, but a lovely stroll). Confiserie Sprüngli at Paradeplatz is the spot for Luxemburgerli macarons."}, {"name": "Globus (optional — department store)", "url": "https://www.google.com/maps/search/?api=1&query=Globus%20Bahnhofstrasse%20Zurich", "address": "Bahnhofstrasse 9, 8001 Zürich", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Globus%20Bahnhofstrasse%20Zurich", "desc": "An upscale one-stop on Bahnhofstrasse — beauty brands (Weleda, luxury lines), a renowned food hall/delicatessen for Swiss chocolate, cheese and gourmet gifts, plus homeware and souvenirs, all under one roof. Closed Sundays; best on your Tuesday departure morning."}, {"name": "Läderach (chocolate)", "url": "https://www.google.com/maps/search/?api=1&query=Laderach%20Bahnhofstrasse%20Zurich", "address": "Bahnhofstrasse, Zürich (also inside Zürich HB)", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Laderach%20Bahnhofstrasse%20Zurich", "desc": "The top chocolate pick — fresh 'FrischSchoggi' broken from big slabs, plus truffles and pralines. On Bahnhofstrasse, with a branch inside Zürich Hauptbahnhof open daily. Buy on your departure day so it travels fresh."}, {"name": "Lindenhof", "url": "https://www.google.com/maps/search/?api=1&query=Lindenhof%20Zurich", "address": "Lindenhof, 8001 Zürich", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Lindenhof%20Zurich", "desc": "A quiet tree‑shaded hilltop terrace on the site of the Roman fort, with one of the best free views over the rooftops, the river and the Grossmünster."}, {"name": "Fraumünster", "url": "https://www.google.com/maps/search/?api=1&query=Fraumunster%20Zurich", "address": "Münsterhof 2, 8001 Zürich", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Fraumunster%20Zurich", "desc": "A 9th‑century church famed for its luminous stained‑glass windows by Marc Chagall and Augusto Giacometti — small but unforgettable."}, {"name": "Confiserie Sprüngli (chocolate & Luxemburgerli)", "url": "https://www.google.com/maps/search/?api=1&query=Confiserie%20Sprungli%20Paradeplatz%20Zurich", "address": "Paradeplatz, Bahnhofstrasse 21, 8001 Zürich", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Confiserie%20Sprungli%20Paradeplatz%20Zurich", "desc": "The Zürich institution at Paradeplatz — pralines, truffles and the famous Luxemburgerli mini-macarons (delicate: eat within a day or two, before flying). Also has a Zürich HB branch open daily."}, {"name": "Lake Zurich Promenade", "url": "https://www.google.com/maps/search/?api=1&query=Lake%20Zurich%20Burkliplatz%20promenade", "address": "Bürkliplatz, 8001 Zürich", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Lake%20Zurich%20Burkliplatz%20promenade", "desc": "Where Bahnhofstrasse meets the water — a wide promenade with Alp views on clear days. A short boat hop is a nice option if you have energy."}, {"name": "Grossmünster", "url": "https://www.google.com/maps/search/?api=1&query=Grossmunster%20Zurich", "address": "Grossmünsterplatz, 8001 Zürich", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Grossmunster%20Zurich", "desc": "Zurich’s landmark twin‑towered Romanesque church and cradle of the Swiss Reformation. Climb the Karlsturm tower for a close‑up view over the old town and lake."}, {"name": "Niederdorf (Old Town)", "url": "https://www.google.com/maps/search/?api=1&query=Niederdorf%20Zurich%20old%20town", "address": "Niederdorfstrasse, 8001 Zürich", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Niederdorf%20Zurich%20old%20town", "desc": "The car‑free lanes east of the river — cafes, fountains, little shops and Sunday‑open restaurants. The heart of old Zurich for an evening wander."}, {"name": "Migros / Coop (optional — Swiss supermarket gifts)", "url": "https://www.google.com/maps/search/?api=1&query=Migros%20Zurich%20Bahnhofstrasse", "address": "Zürich (Bahnhofstrasse & inside Zürich HB)", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Migros%20Zurich%20Bahnhofstrasse", "desc": "The cheap-and-cheerful Swiss souvenir run: Ovomaltine crunchy cream & bars, Aromat seasoning, Ragusa & Frey chocolate (Migros), Kägi wafers, Zweifel chips, Rivella, Swiss herb teas, Rösti mixes, fondue packets and vacuum-packed cheese. The Coop/Migros branches inside Zürich Hauptbahnhof open daily, including Sunday."}]}, "callouts": [{"title": "Border & money note", "body": "Crossing into Switzerland you leave the EU — keep passports handy and finalize any EU VAT refund at the border. Switzerland uses Swiss francs (CHF), not euros; cards are widely accepted, and it’s noticeably pricier than the rest of the trip."}, {"title": "🍫 Chocolate & Swiss haul — timing", "body": "Bahnhofstrasse's shops (Läderach & Sprüngli flagships, Globus, the boutique chocolatiers) are closed on your Sunday arrival — but Zürich Hauptbahnhof (ShopVille) is open 365 days: Läderach Sun 09:00–20:00, several Sprüngli branches from ~8–9am, plus Coop/Migros for the grocery haul. Best plan: buy chocolate on your departure day (Tue) so it's freshest — the station opens early daily, and the airport has Läderach, Sprüngli, Lindt & Victorinox if your morning is tight. Eat any Luxemburgerli before you fly. Chocolate boutiques to browse if you have time: Teuscher, Honold and Max Chocolatier."}], "eat": [{"cat": "🍽 Lunch", "rec": "Zeughauskeller (Bahnhofstrasse 28a)", "notes": "Hearty Swiss in a historic armory — mid"}, {"cat": "🍫 Treat", "rec": "Confiserie Sprüngli (Paradeplatz)", "notes": "Luxemburgerli macarons"}, {"cat": "🍽 Dinner", "rec": "Swiss Chuchi (Adler) or Le Dézaley", "notes": "Fondue & Zürcher Geschnetzeltes"}, {"cat": "🍽 Special", "rec": "Kronenhalle", "notes": "Classic grand restaurant with art on the walls — reserve"}], "foods": [{"name": "Zürcher Geschnetzeltes", "desc": "Zurich’s signature — sliced veal in a creamy white‑wine mushroom sauce, with rösti."}, {"name": "Rösti", "desc": "A golden pan‑fried potato cake, crisp outside and tender within."}, {"name": "Luxemburgerli", "desc": "Sprüngli’s feather‑light mini‑macarons at Paradeplatz — a Zurich must."}, {"name": "Swiss chocolate", "desc": "Lindt, Sprüngli and more — worldwide famous and at its freshest here."}], "good": {"photo": "Lindenhof viewpoint; Grossmünster towers; the lake at Bürkliplatz", "coffee": "Café Schober (old town); Sprüngli", "restrooms": "Station, churches, lakefront (clean, sometimes paid)", "rainy": "Swiss National Museum (by the station), Fraumünster, Kunsthaus art museum", "packing": "A few CHF in cash for small purchases; tomorrow is the mountain — layers ready."}}, {"n": 11, "weekday": "Monday", "date": "July 20", "iso": "2026-07-20", "short": "Mon, Jul 20", "headline": "Lucerne & Mount Rigi", "subtitle": "Old town · lake cruise · cogwheel railway to the summit", "overview": "The grand finale: medieval Lucerne, a cruise across the Lake of the Four Cantons, and Europe’s first mountain railway up the “Queen of the Mountains.” Buy the Rigi day ticket (boat + cogwheel) and let the timetable shape the day. The summit is cool even in July — pack layers.", "weather": "Lucerne ~24°C / 75°F · Rigi summit ~12–15°C / 54–59°F", "walking": "~4–5 km in town + easy mountain paths", "transport": "Driver or train to Lucerne; lake boat (SGV) + Rigi cogwheel railway", "schedule": [{"time": "8:00", "plan": "Depart Zurich (private driver or train Zürich HB → Luzern ~45 min)"}, {"time": "9:30", "plan": "Lucerne old town — Chapel Bridge & Lion Monument"}, {"time": "12:00", "plan": "Lunch in the old town"}, {"time": "~1:00", "plan": "Boat from Lucerne Pier 1 across the lake to Vitznau"}, {"time": "~2:00", "plan": "Cogwheel railway Vitznau → Rigi Kulm (summit)"}, {"time": "3:00", "plan": "Summit views (13 lakes!) & a short walk"}, {"time": "~5:00", "plan": "Descend by cogwheel / cable car"}, {"time": "Evening", "plan": "Driver pickup → return to Zurich"}], "tour": {"intro": "A quick old‑town loop before the boat — all within 10 minutes of the lakefront and Pier 1.", "stops": [{"name": "Chapel Bridge (Kapellbrücke)", "url": "https://www.google.com/maps/search/?api=1&query=Chapel%20Bridge%20Kapellbrucke%20Lucerne", "address": "Kapellbrücke, 6002 Luzern", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Chapel%20Bridge%20Kapellbrucke%20Lucerne", "desc": "The covered wooden bridge from 1333, with its octagonal water tower — the symbol of Lucerne and one of the most photographed sights in Switzerland."}, {"name": "Old Town & Weinmarkt", "url": "https://www.google.com/maps/search/?api=1&query=Lucerne%20old%20town%20Weinmarkt", "address": "Weinmarkt, 6004 Luzern", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Lucerne%20old%20town%20Weinmarkt", "desc": "Cobbled squares with frescoed facades and painted guild houses, just north of the river. Lovely for a coffee and a wander."}, {"name": "Musegg Wall", "url": "https://www.google.com/maps/search/?api=1&query=Musegg%20Wall%20Lucerne", "address": "Museggmauer, 6004 Luzern", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Musegg%20Wall%20Lucerne", "desc": "The intact medieval rampart with climbable towers (and the city’s oldest clock) overlooking the rooftops — a quick optional detour for the view."}, {"name": "Lion Monument (Löwendenkmal)", "url": "https://www.google.com/maps/search/?api=1&query=Lion%20Monument%20Lowendenkmal%20Lucerne", "address": "Denkmalstrasse 4, 6006 Luzern", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Lion%20Monument%20Lowendenkmal%20Lucerne", "desc": "A moving giant lion carved into a cliff to honor the Swiss Guards who died in 1792 — Mark Twain called it “the saddest stone in the world.”"}, {"name": "KKL & Lucerne Pier 1", "url": "https://www.google.com/maps/search/?api=1&query=Lucerne%20railway%20station%20Pier%201%20boat", "address": "Bahnhofplatz / Pier 1, 6003 Luzern", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Lucerne%20railway%20station%20Pier%201%20boat", "desc": "The boats leave from Pier 1, directly across from the train station (beside the striking KKL concert hall). Board here for the SGV cruise toward Vitznau and the Rigi railway."}, {"name": "Rigi Kulm (Summit)", "url": "https://www.google.com/maps/search/?api=1&query=Rigi%20Kulm%20summit", "address": "Rigi Kulm, 6410 Rigi Kulm", "addressUrl": "https://www.google.com/maps/search/?api=1&query=Rigi%20Kulm%20summit", "desc": "At ~1,798 m, the cogwheel (running since 1871) tops out near the summit, where a 360° panorama takes in 13 lakes and the Alps. Short, easy ridge walks fan out from the top; a hot drink on the terrace is well earned."}]}, "callouts": [{"title": "Tickets & timing", "body": "A “Rigi day ticket incl. boat” bundles the lake cruise + unlimited cogwheel/cable‑car — simplest option; buy at Pier 1 or online (rigi.ch). Cruise departures from Lucerne Pier 1 are timed (mid‑day sailings ~12:00 and ~14:12) — check the SGV board on the day and work backward from your boat. Driver pickup time/place for the return to Zurich: __________________ (confirm with driver)."}], "eat": [{"cat": "🍽 Lunch", "rec": "Wirtshaus Galliker or Rathaus Brauerei", "notes": "Traditional Lucerne; rösti, sausages — mid"}, {"cat": "☕ Coffee/Sweet", "rec": "Heini or Bachmann", "notes": "Luxemburgerli & pastries"}, {"cat": "🍽 Special", "rec": "Old Swiss House (by Lion Monument)", "notes": "Historic; reserve"}, {"cat": "🏔 On the mountain", "rec": "Rigi Kulm terrace restaurant", "notes": "Fondue/rösti with a view"}], "foods": [{"name": "Cheese fondue", "desc": "A communal pot of melted cheese and wine — dip bread on long forks; don’t lose yours."}, {"name": "Älplermagronen", "desc": "Alpine ‘herdsman’s macaroni’ with potato, cheese, cream and onions, served with applesauce — ideal mountain food."}, {"name": "Rösti", "desc": "The Swiss potato classic — great on the Rigi summit terrace."}, {"name": "Meringue with cream", "desc": "A Central‑Switzerland specialty — crisp meringue with thick local cream."}], "good": {"photo": "Chapel Bridge & water tower; summit panorama; the lake from the boat deck", "coffee": "Heini; Bachmann (both in the old town)", "restrooms": "Station, Pier 1, on the boat, summit station", "rainy": "Town museums + the covered boat still run; the summit may be clouded — check the webcam at rigi.ch before committing", "packing": "Layers + a warm top and rain shell for the summit; sunglasses; comfortable shoes."}}, {"n": 12, "weekday": "Tuesday", "date": "July 21", "iso": "2026-07-21", "short": "Tue, Jul 21", "headline": "Departure — Zurich → Home", "subtitle": "Checkout · airport transfer · fly home", "overview": "Last morning. Pack, settle the hotel bill, and head to the airport with plenty of buffer for international check‑in. The train from Zürich HB to the airport takes only ~10 minutes and runs constantly.", "weather": "July avg ~24°C / 75°F", "walking": "Minimal", "transport": "Zürich HB → ZRH airport train (~10 min) or taxi", "schedule": [{"time": "Morning", "plan": "Pack; hotel checkout; final coffee on Bahnhofstrasse"}, {"time": "3–4 hrs before", "plan": "Transfer to Zurich Airport (ZRH) — train or taxi"}, {"time": "At ZRH", "plan": "Swiss VAT refund desk (if claiming), check‑in, security"}, {"time": "Flight", "plan": "Zurich (ZRH) → Home City (HOM)"}], "tour": null, "callouts": [{"title": "Before you leave Switzerland", "body": "If you bought goods in Switzerland, the Swiss VAT (8.1%) refund is handled at the airport — allow extra time at the customs/refund desk before security. Use up Swiss francs or keep a few as souvenirs."}], "eat": [{"cat": "☕ Last coffee", "rec": "Sprüngli or a Bahnhofstrasse cafe", "notes": "Grab Luxemburgerli to take home"}, {"cat": "🍽 Airport", "rec": "Eat at ZRH after security", "notes": "Good options airside"}], "foods": [{"name": "Luxemburgerli to go", "desc": "Grab a box of Sprüngli’s mini‑macarons for the journey — best eaten within a day or two."}, {"name": "Swiss chocolate", "desc": "Last‑minute bars from the airport or Bahnhofstrasse make easy gifts (keep them cool)."}], "good": {"photo": "One last look at the lake and Alps on a clear morning", "coffee": "Sprüngli; station cafes", "restrooms": "Station & airport", "rainy": "You’re heading indoors — no backup needed", "packing": "Flight‑home checklist (see Packing): passports, chargers, souvenirs, refund receipts, liquids in carry‑on rules."}}], "cities": [{"city": "Brussels", "links": [{"label": "Hotel", "t": "Brussels Marriott Hotel Grand Place", "u": "https://www.google.com/maps/search/?api=1&query=Brussels%20Marriott%20Hotel%20Grand%20Place"}, {"label": "Station", "t": "Brussels‑Central", "u": "https://www.google.com/maps/search/?api=1&query=Brussels%20Central%20railway%20station"}, {"label": "Driver pickup", "t": "Brussels Marriott lobby — Jul 14, 10:00 AM (to Luxembourg)", "u": null}], "attractions": [{"t": "Grand‑Place", "u": "https://www.google.com/maps/search/?api=1&query=Grand-Place%20Brussels", "note": "central square"}, {"t": "Galeries Royales Saint‑Hubert", "u": "https://www.google.com/maps/search/?api=1&query=Galeries%20Royales%20Saint-Hubert%20Brussels", "note": "covered arcade"}, {"t": "Manneken Pis", "u": "https://www.google.com/maps/search/?api=1&query=Manneken%20Pis%20Brussels", "note": "the little fountain"}, {"t": "St. Michael & St. Gudula Cathedral", "u": "https://www.google.com/maps/search/?api=1&query=Cathedral%20of%20St%20Michael%20and%20St%20Gudula%20Brussels", "note": "Gothic cathedral"}, {"t": "Mont des Arts", "u": "https://www.google.com/maps/search/?api=1&query=Mont%20des%20Arts%20Brussels", "note": "viewpoint & gardens"}], "restaurants": [{"t": "Chez Léon", "u": "https://www.google.com/maps/search/?api=1&query=Chez%20Leon%20Rue%20des%20Bouchers%20Brussels", "note": "moules‑frites"}, {"t": "Maison Dandoy", "u": "https://www.google.com/maps/search/?api=1&query=Maison%20Dandoy%20Rue%20Charles%20Buls%20Brussels", "note": "waffles & speculoos"}, {"t": "Delirium Café", "u": "https://www.google.com/maps/search/?api=1&query=Delirium%20Cafe%20Brussels", "note": "beer hall"}, {"t": "OR Coffee Brewery", "u": "https://www.google.com/maps/search/?api=1&query=OR%20Coffee%20Brewery%20Rue%20Auguste%20Orts%20Brussels", "note": "coffee"}]}, {"city": "Bruges", "links": [{"label": "Station", "t": "Brugge Station", "u": "https://www.google.com/maps/search/?api=1&query=Brugge%20railway%20station%20Stationsplein"}], "attractions": [{"t": "Markt & Belfry", "u": "https://www.google.com/maps/search/?api=1&query=Belfry%20of%20Bruges%20Markt", "note": "main square + tower"}, {"t": "Rozenhoedkaai", "u": "https://www.google.com/maps/search/?api=1&query=Rozenhoedkaai%20Bruges", "note": "iconic canal view"}, {"t": "Burg & Basilica of the Holy Blood", "u": "https://www.google.com/maps/search/?api=1&query=Burg%20Square%20Bruges", "note": "medieval square"}, {"t": "Church of Our Lady", "u": "https://www.google.com/maps/search/?api=1&query=Church%20of%20Our%20Lady%20Bruges", "note": "Michelangelo Madonna"}, {"t": "Minnewater / Begijnhof", "u": "https://www.google.com/maps/search/?api=1&query=Minnewater%20Bruges", "note": "lake & beguinage"}, {"t": "Canal docks near Rozenhoedkaai", "u": "https://www.google.com/maps/search/?api=1&query=Rozenhoedkaai%20boat%20dock%20Bruges", "note": "boat boarding"}], "restaurants": [{"t": "The Chocolate Line", "u": "https://www.google.com/maps/search/?api=1&query=The%20Chocolate%20Line%20Simon%20Stevinplein%20Bruges", "note": "chocolate"}, {"t": "De Halve Maan Brewery", "u": "https://www.google.com/maps/search/?api=1&query=De%20Halve%20Maan%20Brewery%20Walplein%20Bruges", "note": "Brugse Zot"}, {"t": "De Stove", "u": "https://www.google.com/maps/search/?api=1&query=De%20Stove%20restaurant%20Bruges", "note": "bistro lunch/dinner"}]}, {"city": "Ghent", "links": [{"label": "Station", "t": "Gent‑Sint‑Pieters", "u": "https://www.google.com/maps/search/?api=1&query=Gent-Sint-Pieters%20railway%20station"}], "attractions": [{"t": "Gravensteen Castle", "u": "https://www.google.com/maps/search/?api=1&query=Gravensteen%20Ghent", "note": "moated fortress"}, {"t": "St. Bavo’s Cathedral", "u": "https://www.google.com/maps/search/?api=1&query=Saint%20Bavo's%20Cathedral%20Ghent", "note": "Ghent Altarpiece"}, {"t": "Graslei & Korenlei", "u": "https://www.google.com/maps/search/?api=1&query=Graslei%20Ghent", "note": "medieval harbour"}, {"t": "Belfry of Ghent", "u": "https://www.google.com/maps/search/?api=1&query=Belfry%20of%20Ghent", "note": "UNESCO tower"}], "restaurants": [{"t": "Balls & Glory", "u": "https://www.google.com/maps/search/?api=1&query=Balls%20%26%20Glory%20Ghent", "note": "casual lunch"}, {"t": "Mokabon", "u": "https://www.google.com/maps/search/?api=1&query=Mokabon%20Ghent", "note": "coffee"}]}, {"city": "Luxembourg City", "links": [{"label": "Hotel", "t": "Luxembourg Marriott Hotel Alfa", "u": "https://www.google.com/maps/search/?api=1&query=Luxembourg%20Marriott%20Hotel%20Alfa%20Place%20de%20la%20Gare"}, {"label": "Station", "t": "Luxembourg Gare Centrale", "u": "https://www.google.com/maps/search/?api=1&query=Luxembourg%20Central%20Station%20Gare"}, {"label": "Driver pickup", "t": "Marriott Alfa lobby — Jul 17, 10:00 AM (to Strasbourg)", "u": null}], "attractions": [{"t": "Bock Casemates", "u": "https://www.google.com/maps/search/?api=1&query=Bock%20Casemates%20Luxembourg", "note": "cliff tunnels"}, {"t": "Chemin de la Corniche", "u": "https://www.google.com/maps/search/?api=1&query=Chemin%20de%20la%20Corniche%20Luxembourg", "note": "rampart balcony"}, {"t": "Grand Ducal Palace", "u": "https://www.google.com/maps/search/?api=1&query=Grand%20Ducal%20Palace%20Luxembourg", "note": "royal residence"}, {"t": "Place de la Constitution", "u": "https://www.google.com/maps/search/?api=1&query=Place%20de%20la%20Constitution%20Luxembourg", "note": "Gëlle Fra viewpoint"}, {"t": "The Grund", "u": "https://www.google.com/maps/search/?api=1&query=Grund%20Luxembourg", "note": "lower town"}], "restaurants": [{"t": "Brasserie Guillaume", "u": "https://www.google.com/maps/search/?api=1&query=Brasserie%20Guillaume%20Luxembourg", "note": "local classics"}, {"t": "Oberweis", "u": "https://www.google.com/maps/search/?api=1&query=Oberweis%20Grand-Rue%20Luxembourg", "note": "patisserie"}]}, {"city": "Strasbourg", "links": [{"label": "Hotel", "t": "Maison Rouge Hotel & Spa", "u": "https://www.google.com/maps/search/?api=1&query=Maison%20Rouge%20Strasbourg%20Hotel%20Spa%20Autograph%20Collection"}, {"label": "Station", "t": "Strasbourg Gare Centrale", "u": "https://www.google.com/maps/search/?api=1&query=Strasbourg%20railway%20station%20Gare%20Centrale"}, {"label": "Driver pickup", "t": "Maison Rouge — Jul 19, 10:00 AM (to Zurich)", "u": null}], "attractions": [{"t": "Strasbourg Cathedral", "u": "https://www.google.com/maps/search/?api=1&query=Strasbourg%20Cathedral", "note": "Gothic + astronomical clock"}, {"t": "La Petite France", "u": "https://www.google.com/maps/search/?api=1&query=La%20Petite%20France%20Strasbourg", "note": "canal quarter"}, {"t": "Ponts Couverts & Barrage Vauban", "u": "https://www.google.com/maps/search/?api=1&query=Ponts%20Couverts%20Strasbourg", "note": "towers + terrace view"}, {"t": "Palais Rohan", "u": "https://www.google.com/maps/search/?api=1&query=Palais%20Rohan%20Strasbourg", "note": "museums"}, {"t": "Batorama boarding", "u": "https://www.google.com/maps/search/?api=1&query=Batorama%20Strasbourg%20Palais%20Rohan", "note": "boat cruise"}], "restaurants": [{"t": "Maison Kammerzell", "u": "https://www.google.com/maps/search/?api=1&query=Maison%20Kammerzell%20Strasbourg", "note": "winstub on the square"}, {"t": "Le Tire‑Bouchon", "u": "https://www.google.com/maps/search/?api=1&query=Le%20Tire-Bouchon%20Strasbourg", "note": "tarte flambée"}]}, {"city": "Lucerne", "links": [{"label": "Station", "t": "Lucerne Station / Pier 1", "u": "https://www.google.com/maps/search/?api=1&query=Lucerne%20railway%20station%20Bahnhofplatz"}, {"label": "Driver pickup", "t": "Driver pickup — Jul 20 (confirm time/place)", "u": null}], "attractions": [{"t": "Chapel Bridge", "u": "https://www.google.com/maps/search/?api=1&query=Chapel%20Bridge%20Lucerne", "note": "covered wooden bridge"}, {"t": "Lion Monument", "u": "https://www.google.com/maps/search/?api=1&query=Lion%20Monument%20Lucerne", "note": "cliff carving"}, {"t": "Old Town / Weinmarkt", "u": "https://www.google.com/maps/search/?api=1&query=Weinmarkt%20Lucerne", "note": "frescoed squares"}, {"t": "Pier 1 (boats)", "u": "https://www.google.com/maps/search/?api=1&query=Lucerne%20Pier%201%20boat", "note": "lake cruise dock"}, {"t": "Rigi Kulm summit", "u": "https://www.google.com/maps/search/?api=1&query=Rigi%20Kulm", "note": "mountain top"}], "restaurants": [{"t": "Wirtshaus Galliker", "u": "https://www.google.com/maps/search/?api=1&query=Wirtshaus%20Galliker%20Lucerne", "note": "traditional"}, {"t": "Old Swiss House", "u": "https://www.google.com/maps/search/?api=1&query=Old%20Swiss%20House%20Lucerne", "note": "historic, by Lion Monument"}]}, {"city": "Zurich", "links": [{"label": "Hotel", "t": "Zurich Marriott Hotel", "u": "https://www.google.com/maps/search/?api=1&query=Zurich%20Marriott%20Hotel%20Neumuhlequai%2042"}, {"label": "Station", "t": "Zürich HB", "u": "https://www.google.com/maps/search/?api=1&query=Zurich%20Hauptbahnhof%20main%20station"}, {"label": "Driver pickup", "t": "Zurich Marriott — Jul 20 day trip; airport Jul 21", "u": null}], "attractions": [{"t": "Grossmünster", "u": "https://www.google.com/maps/search/?api=1&query=Grossmunster%20Zurich", "note": "twin‑tower church"}, {"t": "Fraumünster", "u": "https://www.google.com/maps/search/?api=1&query=Fraumunster%20Zurich", "note": "Chagall windows"}, {"t": "Lindenhof", "u": "https://www.google.com/maps/search/?api=1&query=Lindenhof%20Zurich", "note": "old‑town viewpoint"}, {"t": "Bahnhofstrasse", "u": "https://www.google.com/maps/search/?api=1&query=Bahnhofstrasse%20Zurich", "note": "shopping street"}, {"t": "Lake Zurich (Bürkliplatz)", "u": "https://www.google.com/maps/search/?api=1&query=Burkliplatz%20Zurich%20lake", "note": "promenade"}], "restaurants": [{"t": "Zeughauskeller", "u": "https://www.google.com/maps/search/?api=1&query=Zeughauskeller%20Zurich", "note": "hearty Swiss"}, {"t": "Confiserie Sprüngli", "u": "https://www.google.com/maps/search/?api=1&query=Confiserie%20Sprungli%20Paradeplatz%20Zurich", "note": "Luxemburgerli"}]}], "restaurants": [{"city": "Brussels", "rows": [{"cat": "Breakfast", "rec": "Le Pain Quotidien; hotel buffet", "price": "$–$$"}, {"cat": "Lunch", "rec": "Nüetnigenough; Fin de Siècle", "price": "$$"}, {"cat": "Dinner", "rec": "Chez Léon; Aux Armes de Bruxelles", "price": "$$"}, {"cat": "Coffee", "rec": "OR Coffee Brewery; MOK", "price": "$"}, {"cat": "Dessert/Waffles", "rec": "Maison Dandoy", "price": "$"}, {"cat": "Beer", "rec": "Delirium Café; À la Mort Subite; Moeder Lambic", "price": "$–$$"}, {"cat": "Chocolate", "rec": "Pierre Marcolini; Neuhaus; Mary", "price": "$$"}, {"cat": "Special occasion", "rec": "Comme Chez Soi (Michelin) — reserve", "price": "$$$"}]}, {"city": "Bruges", "rows": [{"cat": "Lunch", "rec": "De Stove; That’s Toast; Books & Brunch", "price": "$–$$"}, {"cat": "Dinner", "rec": "Den Gouden Harynck; De Vlaamsche Pot", "price": "$$–$$$"}, {"cat": "Coffee/Dessert", "rec": "Li O Lait; Servaas Van Mullem", "price": "$"}, {"cat": "Beer", "rec": "De Halve Maan (Brugse Zot)", "price": "$$"}, {"cat": "Chocolate", "rec": "The Chocolate Line; Dumon", "price": "$$"}, {"cat": "Frites", "rec": "Frituur on the Markt", "price": "$"}]}, {"city": "Ghent", "rows": [{"cat": "Lunch", "rec": "Balls & Glory; Soup Lounge", "price": "$"}, {"cat": "Dinner", "rec": "’t Klokhuis; Mosquito Coast", "price": "$$"}, {"cat": "Coffee", "rec": "Mokabon", "price": "$"}, {"cat": "Treat", "rec": "Cuberdons (street stalls)", "price": "$"}]}, {"city": "Luxembourg City", "rows": [{"cat": "Lunch", "rec": "Brasserie Guillaume; Um Dierfgen", "price": "$$"}, {"cat": "Dinner", "rec": "Brasserie Alfa (hotel); Konrad", "price": "$$"}, {"cat": "Coffee/Pastry", "rec": "Oberweis; Namur", "price": "$–$$"}, {"cat": "Wine", "rec": "Moselle Riesling by the glass", "price": "$$"}, {"cat": "Special occasion", "rec": "Clairefontaine; Mosconi (Grund)", "price": "$$$"}]}, {"city": "Strasbourg & Colmar (Alsace)", "rows": [{"cat": "Lunch", "rec": "Le Tire‑Bouchon; Au Brasseur (tarte flambée)", "price": "$–$$"}, {"cat": "Dinner", "rec": "Chez Yvonne; Maison Kammerzell (winstub)", "price": "$$"}, {"cat": "Coffee", "rec": "Café Bretelles", "price": "$"}, {"cat": "Pastry", "rec": "Pâtisserie Christian (Kougelhopf)", "price": "$"}, {"cat": "Special occasion", "rec": "Au Crocodile (Michelin) — reserve", "price": "$$$"}]}, {"city": "Zurich", "rows": [{"cat": "Lunch", "rec": "Zeughauskeller; Haus Hiltl (veg)", "price": "$$"}, {"cat": "Dinner", "rec": "Swiss Chuchi (fondue); Le Dézaley", "price": "$$–$$$"}, {"cat": "Coffee", "rec": "Café Schober", "price": "$–$$"}, {"cat": "Dessert/Chocolate", "rec": "Confiserie Sprüngli (Luxemburgerli)", "price": "$–$$"}, {"cat": "Special occasion", "rec": "Kronenhalle — reserve", "price": "$$$"}]}, {"city": "Lucerne", "rows": [{"cat": "Lunch", "rec": "Wirtshaus Galliker; Rathaus Brauerei", "price": "$$"}, {"cat": "Dinner", "rec": "Old Swiss House — reserve", "price": "$$–$$$"}, {"cat": "Coffee/Sweet", "rec": "Heini; Bachmann", "price": "$–$$"}, {"cat": "On the mountain", "rec": "Rigi Kulm terrace restaurant", "price": "$$"}]}], "foods": [{"country": "Belgium 🇧🇪", "items": [{"name": "Belgian Waffles", "desc": "Two kinds: the light, rectangular Brussels waffle dusted with sugar, and the dense, caramelized Liège waffle. Eat them plain or piled with fruit and cream."}, {"name": "Frites", "desc": "Twice‑fried, thick‑cut and crisp, served in a cone with mayo or one of dozens of sauces. A national obsession — best from a frituur."}, {"name": "Moules‑frites", "desc": "Mussels steamed with white wine, celery and onion, served with fries. The summer classic."}, {"name": "Carbonnade Flamande", "desc": "A rich beef‑and‑onion stew braised slowly in dark Belgian beer, faintly sweet from a bit of bread and mustard."}, {"name": "Speculoos", "desc": "Crisp, spiced caramel‑brown biscuits (cinnamon, nutmeg, clove) — the cookie on your coffee saucer, and a spread."}, {"name": "Belgian Chocolate", "desc": "Pralines (filled chocolates) invented here; seek out small chocolatiers for the freshest."}, {"name": "Trappist Beer", "desc": "Strong, complex ales brewed at abbeys (Westmalle, Chimay, Orval, Rochefort). Sip slowly."}]}, {"country": "Luxembourg 🇱🇺", "items": [{"name": "Judd mat Gaardebounen", "desc": "The national dish: smoked pork collar (‘judd’) simmered and served with broad beans in a creamy sauce, with potatoes."}, {"name": "Gromperekichelcher", "desc": "Crispy fried potato fritters spiked with onion and parsley — a beloved market and festival snack."}, {"name": "Riesling (Moselle)", "desc": "Luxembourg’s Moselle valley makes crisp, mineral white wines; Crémant sparkling is excellent too."}]}, {"country": "Alsace (France) 🇫🇷", "items": [{"name": "Tarte Flambée (Flammekueche)", "desc": "Thin, crackly dough topped with crème fraîche, onions and lardons, baked in a blazing oven — Alsace’s answer to pizza."}, {"name": "Choucroute Garnie", "desc": "Wine‑braised sauerkraut heaped with sausages, smoked pork and potatoes — hearty and festive."}, {"name": "Kougelhopf", "desc": "A fluted ring cake with raisins and almonds, dusted with sugar — sweet for breakfast, savory as an aperitif snack."}, {"name": "Alsatian Wine", "desc": "Aromatic whites — Riesling, Gewürztraminer, Pinot Gris — from the villages you pass on the wine route."}]}, {"country": "Switzerland 🇨🇭", "items": [{"name": "Rösti", "desc": "A golden pan‑fried potato cake, crisp outside and tender within — a side or a meal topped with egg, cheese or bacon."}, {"name": "Cheese Fondue", "desc": "A communal pot of melted cheese and wine; dip cubes of bread on long forks. Don’t lose your bread — tradition demands a forfeit."}, {"name": "Zürcher Geschnetzeltes", "desc": "Zurich’s signature: sliced veal in a creamy white‑wine and mushroom sauce, classically with rösti."}, {"name": "Luxemburgerli", "desc": "Sprüngli’s feather‑light mini‑macarons in pastel flavors — a Zurich must, and they travel home well (briefly)."}]}], "transport": {"tables": [{"name": "Airport Transfers", "tables": [[["Where", "Best option", "Approx."], ["BRU → Brussels centre", "Pre‑booked transfer or airport train (~17 min)", "~€70 van / ~€12 train"], ["Zürich HB → ZRH", "Direct train (~10 min, very frequent)", "CHF ~7 pp"]]], "bullets": []}, {"name": "Train Routes (day trips)", "tables": [[["Route", "Time", "Frequency", "Approx."], ["Brussels‑Central ↔ Bruges", "~1 hr", "~2/hr", "€18–35 rt"], ["Brussels‑Central ↔ Ghent‑St‑Pieters", "~36 min", "frequent", "€18–28 rt"], ["Zürich HB ↔ Lucerne", "~45 min", "~2/hr", "CHF ~25 rt"]]], "bullets": []}, {"name": "Taxi, Uber & Walking", "tables": [], "bullets": ["Uber: available in Brussels and Zurich; limited/none in Bruges, Luxembourg and Strasbourg (use taxi ranks or apps like Bolt/local taxis).", "Taxis: easy at stations and ranks; Swiss taxis are expensive — favor trains/trams.", "Walking: every old town on this trip is compact and mostly pedestrian — most days are walking days.", "Luxembourg: all public transport nationwide is free (trams, buses, trains 2nd class)."]}, {"name": "Private Drivers (booked)", "tables": [[["Date", "Route", "Payment"], ["Jul 14", "Brussels → Durbuy → Dinant → Luxembourg", "agreed fare (cash)"], ["Jul 17", "Luxembourg → Haut‑Kœnigsbourg → Colmar → Strasbourg", "agreed fare + dep."], ["Jul 19", "Strasbourg → Zurich", "agreed fare by card + dep."], ["Jul 20", "Zurich ↔ Lucerne (to confirm)", "______"]]], "bullets": []}], "notes": [{"title": "Belgian train tip", "body": "Domestic Belgian trains have no seat reservations — just buy a ticket and board any train on the route. A Standard Ticket or a weekend/discount fare both work; validate via the app or machine."}], "bullets": []}, "packing": [{"title": "🎒  Carry‑on", "items": ["Passport + photo copies", "Wallet, cards, some euros + a few CHF", "Phone + charger + power bank", "Universal adapter (Type C/E for EU; Type J for Switzerland)", "Medications (in original packaging)", "Eye mask, earplugs, neck pillow", "Change of clothes + toothbrush", "Refillable water bottle (empty through security)", "This guide + offline maps downloaded", "Snacks for the overnight flight"]}, {"title": "🧳  Checked Bag", "items": ["Comfortable walking shoes (broken in)", "Layers: light jacket + warm top for Mt. Rigi", "Rain shell / compact umbrella", "Dressier outfit for special dinners", "Sunglasses, hat, sunscreen", "Toiletries (travel sizes)", "Laundry bag + a few detergent sheets", "Reusable tote for markets/shopping"]}, {"title": "🏨  Hotel Departure (every checkout)", "items": ["Chargers + adapters from the outlets", "Safe emptied (passports, valuables)", "Bathroom + closet + door hook checked", "Under the bed & nightstands", "Settle bill / city tax; keep receipts", "Confirm next driver/train time", "Water + snacks for the road"]}, {"title": "🌍  International Travel", "items": ["Notify bank/card of travel dates", "Check passport validity (6+ months)", "Travel insurance details saved offline", "Roaming/eSIM plan active", "Emergency contacts + embassy info saved", "Copies of bookings (cloud + printed)", "Tip cash in euros (drivers, guides)"]}, {"title": "✈  Flight Home", "items": ["Check‑in online; download boarding passes", "VAT refund: receipts + forms ready (validate before security)", "Liquids repacked to carry‑on rules", "Souvenirs/chocolate packed safely (heat!)", "Last of the local cash spent or saved", "Chargers + adapter in carry‑on", "Arrive 3–4 hrs early for international"]}], "emergency": {"numbers": [{"country": "Belgium", "general": "112", "police": "101", "amb": "112"}, {"country": "Luxembourg", "general": "112", "police": "113", "amb": "112"}, {"country": "France", "general": "112", "police": "17", "amb": "15 (medical) / 18 (fire)"}, {"country": "Switzerland", "general": "112", "police": "117", "amb": "144 (amb) / 118 (fire)"}], "hospitals": [{"city": "Brussels", "hospital": "CHU Saint‑Pierre, Rue Haute 322", "embassy": "U.S. Embassy: Bd du Régent 27, +32 2 811 4000"}, {"city": "Luxembourg", "hospital": "Centre Hospitalier de Luxembourg, 4 Rue E. Barblé", "embassy": "U.S. Embassy: 22 Bd E. Servais, +352 46 01 23"}, {"city": "Strasbourg", "hospital": "Nouvel Hôpital Civil, 1 Place de l’Hôpital", "embassy": "U.S. Consulate: 15 Ave d’Alsace, +33 3 88 35 31 04"}, {"city": "Zurich/Lucerne", "hospital": "UniversitätsSpital Zürich, Rämistrasse 100", "embassy": "U.S. Embassy (Bern): Sulgeneckstr. 19, +41 31 357 70 11"}], "money": [{"k": "💶  Currency", "v": "Belgium / Luxembourg / France: Euro (€). Switzerland: Swiss Franc (CHF). Cards widely accepted; carry cash for drivers, small cafes, paid toilets."}, {"k": "💵  Tipping", "v": "Service is included. Round up or ~5–10% for good service; tip canal/guide a few coins; settle drivers in the agreed cash."}, {"k": "🔌  Outlets", "v": "230V. Type C/E plugs in BE/LU/FR. Switzerland uses Type J — EU plugs often won’t fit the recessed socket, so bring a Swiss/J adapter."}, {"k": "🧾  VAT refund", "v": "EU goods (BE/LU/FR): get customs export validation when you LEAVE the EU — for you that’s the France→Switzerland road border on Jul 19. Keep receipts + forms ready. Swiss VAT (8.1%) is refunded separately at Zurich airport."}, {"k": "🚻  Restrooms", "v": "Public toilets often cost €0.50–1 (coins) — also free in cafes, department stores and museums when you’re a customer."}]}};
+
+/* ====================== LEG / COUNTRY MAP ====================== */
+const LEGS = {
+  transit:{name:"In transit", flag:"✈", color:"#7A6A52"},
+  be:{name:"Belgium", flag:"🇧🇪", color:"#C8941E"},
+  lu:{name:"Luxembourg", flag:"🇱🇺", color:"#3E6B8C"},
+  fr:{name:"Alsace", flag:"🇫🇷", color:"#A8423C"},
+  ch:{name:"Switzerland", flag:"🇨🇭", color:"#2F6B4F"},
+};
+const DAY_LEG = {1:"transit",2:"be",3:"be",4:"be",5:"lu",6:"lu",7:"lu",8:"fr",9:"fr",10:"ch",11:"ch",12:"ch"};
+
+/* ====================== STORAGE (safe) ====================== */
+const store = {
+  ok:true,
+  get(k,f){ try{const v=localStorage.getItem(k);return v==null?f:JSON.parse(v);}catch(e){this.ok=false;return (this._m&&this._m[k])??f;} },
+  set(k,v){ try{localStorage.setItem(k,JSON.stringify(v));}catch(e){this.ok=false;(this._m=this._m||{})[k]=v;} },
+  _m:{}
+};
+
+/* ====================== HELPERS ====================== */
+const $ = (s,el=document)=>el.querySelector(s);
+const esc = s => (s==null?"":String(s)).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const tel = s => "tel:"+String(s).replace(/[^0-9+]/g,"");
+function legOfDay(n){ return LEGS[DAY_LEG[n]||"transit"]; }
+function setAccent(color){
+  document.documentElement.style.setProperty("--accent",color);
+  document.documentElement.style.setProperty("--accent-tint","color-mix(in srgb,"+color+" 16%, #FAF6EE)");
+  const m=document.querySelector('meta[name=theme-color]'); if(m) m.content="#0E2A33";
+}
+function setLegPill(leg){
+  $("#legFlag").textContent=leg.flag; $("#legName").textContent=leg.name;
+}
+/* trip-day logic */
+function tripDayNumber(now=new Date()){
+  const start=new Date(2026,6,10), end=new Date(2026,6,21);
+  const d0=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  if(d0<start) return {state:"before", n:1, days:Math.round((start-d0)/864e5)};
+  if(d0>end)   return {state:"after",  n:12};
+  return {state:"during", n:Math.round((d0-start)/864e5)+1};
+}
+const ICON = {
+  walk:'🚶', train:'🚆', weather:'🌤️', photo:'📷', coffee:'☕', rain:'☔', wc:'🚻', bag:'🧳',
+};
+
+/* ====================== ROUTER ====================== */
+const state = {tab:"today", day:null, shopList:"traveler1", listMode:"pack"};
+function go(tab,opts={}){ state.tab=tab; if('day' in opts)state.day=opts.day; render(); window.scrollTo({top:0}); }
+
+const SHOPPING={lists:[
+  {id:"traveler1",label:"Traveler 1",flag:"🇫🇷",accent:"#A8423C",note:"Strasbourg pharmacy — mature / dry-skin focus",tiers:[
+    {title:"⭐ Must",items:[
+      {n:"Caudalie Vinoperfect Serum",p:"€45–50",d:"Brightening serum that fades dark spots and evens tone (viniferine + niacinamide)."},
+      {n:"La Roche-Posay Anthelios UVMune 400 SPF50+",p:"€18–22",d:"High-protection sunscreen with a next-gen UVA filter and elegant textures.",s:"Standard Tinted if you want the tinted version; complexion Fair/Light."},
+      {n:"Avène DermAbsolu Cream",p:"€30–38",d:"Firming, radiance-boosting anti-aging day cream for mature skin."},
+      {n:"La Roche-Posay Rosaliac AR Serum",p:"€22–28",d:"Targets persistent facial redness and visible vessels."}]},
+    {title:"👍 Recommended",items:[
+      {n:"SVR Ampoule Lift A",p:"€25–32",d:"Firming, lifting anti-aging concentrate."},
+      {n:"Caudalie eye cream (Premier Cru or Resveratrol-Lift)",p:"€35–50",d:"Anti-aging eye care to smooth and firm — pick one, not both."},
+      {n:"Embryolisse Lait-Crème",p:"€12–18",d:"Cult multi-use moisturiser / primer / makeup remover."}]},
+    {title:"🧴 Body",items:[
+      {n:"La Roche-Posay Lipikar Baume AP+M",p:"€12–18",d:"Rich body balm for very dry, mature skin."},
+      {n:"Caudalie Vinotherapist Body Butter",p:"€20–26",d:"Deep body hydration without feeling greasy."},
+      {n:"Nuxe Huile Prodigieuse",p:"€18–28",d:"Iconic multi-use dry oil for body and hair."},
+      {n:"SVR Xérial 10 Body Lotion",p:"€12–16",d:"Smooths rough, dry skin on arms and legs."},
+      {n:"Avène Cold Cream Hand Cream",p:"€6–9",d:"Protective travel hand cream for dry hands."}]},
+    {title:"💇 Hair — blonde, thick",items:[
+      {n:"Klorane Prickly Pear Shampoo (+ conditioner)",p:"€8–12 ea",d:"Softness and shine for dry or dull blonde hair."},
+      {n:"René Furterer Okara Blond Shampoo",p:"€18–24",d:"Brightens natural/highlighted blonde and prevents dullness."},
+      {n:"Klorane Oat Dry Shampoo",p:"€8–11",d:"Freshens between washes and adds texture."}]},
+    {title:"🦶 Feet & tired legs",items:[
+      {n:"SVR Xérial 30 Foot Cream",p:"€10–14",d:"High-urea cream for very dry, calloused feet — nightly on heels."},
+      {n:"Uriage Bariéderm cracks ointment / stick",p:"€9–13",d:"Repairs split, cracked heels; keep for painful cracks."},
+      {n:"Akileïne relaxing foot / heavy-legs gel",p:"€10–15",d:"Cooling relief after long walking days."}]},
+    {title:"💋 Lips",items:[
+      {n:"Nuxe Rêve de Miel Lip Balm",p:"€10–13",d:"Intensive honey balm for very dry lips — best overnight."}]}
+  ]},
+  {id:"traveler2",label:"Traveler 2",flag:"🇫🇷",accent:"#A8423C",note:"Strasbourg pharmacy — curated list",tiers:[
+    {title:"⭐⭐⭐⭐⭐ Don't leave France without these",items:[
+      {n:"La Roche-Posay Anthelios UVMune 400 SPF50+",p:"€18–22",d:"Next-gen high-protection sunscreen with superb textures.",s:"Standard Tinted, or Invisible Fluid untinted; complexion light neutral/cool."},
+      {n:"Caudalie Vinoperfect Serum",p:"€45–50",d:"Brightening serum for dark spots and even tone."},
+      {n:"Embryolisse Lait-Crème",p:"€12–18",d:"Cult multi-use moisturiser / primer."},
+      {n:"Nuxe Rêve de Miel Lip Balm",p:"€10–13",d:"Intensive balm for dry lips, ideal overnight."},
+      {n:"SVR Xérial 30 Foot Cream",p:"€10–14",d:"High-urea smoothing cream for calloused feet."}]},
+    {title:"⭐⭐⭐⭐ Worth buying",items:[
+      {n:"Avène Cleanance Comedomed",p:"€18–24",d:"Anti-blemish concentrate for oily/blemish-prone skin."},
+      {n:"Bioderma Sébium Pore Refiner",p:"€14–18",d:"Smooths and minimises the look of pores."},
+      {n:"Ducray Anaphase+ Shampoo",p:"€12–16",d:"Supportive shampoo for thinning hair / active shedding."},
+      {n:"La Roche-Posay Tinted Fluid",p:"€18–22",d:"Tinted mineral sunscreen fluid — skip if you take the tinted sunscreen above.",s:"Standard Tinted; complexion light neutral/cool."},
+      {n:"Bourjois Mascara",p:"€10–13",d:"Everyday mascara, usually cheaper than in the US.",s:"Black (Noir); Brown optional."}]},
+    {title:"⭐⭐ Nice if you have room / budget",items:[
+      {n:"A313 Cream",p:"€8–12",d:"Vitamin-A pommade (retinol-like) — start slowly, not equal to prescription tretinoin."},
+      {n:"Nuxe Huile Prodigieuse",p:"€18–28",d:"Multi-use dry oil for body and hair."},
+      {n:"René Furterer Triphasic",p:"€30–45",d:"Targeted anti-shedding scalp treatment (Reactional or Progressive)."}]},
+    {title:"🧴 Body (from your guide)",items:[
+      {n:"La Roche-Posay Lipikar Baume AP+M",p:"€12–18",d:"Rich body balm for dry skin and after sun."},
+      {n:"Bioderma Atoderm Shower Oil",p:"€10–16",d:"Gentle cleansing shower oil that leaves skin soft."},
+      {n:"Avène XeraCalm A.D Balm",p:"€18–24",d:"Soothes irritated or very dry skin."},
+      {n:"Bioderma Sensibio Micellar Water",p:"€10–16",d:"Gentle makeup remover / cleanser (grab a small size — it's heavy)."},
+      {n:"Caudalie Thé des Vignes Body Oil",p:"€20–28",d:"Light luxury body oil for evenings or extra hydration."}]},
+    {title:"🦶 Foot extra",items:[
+      {n:"SVR Xérial 50 Extreme",p:"€12–16",d:"Stronger urea for stubborn calluses — spot-use only."}]}
+  ]},
+  {id:"traveler3",label:"Traveler 3",flag:"🇫🇷",accent:"#A8423C",note:"Strasbourg pharmacy — combination skin, pores & prevention",tiers:[
+    {title:"⭐ Top priorities",items:[
+      {n:"La Roche-Posay Anthelios UVMune 400 Invisible Fluid SPF50+",p:"€18–22",d:"Ultra-light, invisible high-protection sunscreen — ideal for combination skin."},
+      {n:"Caudalie Vinoperfect Serum",p:"€45–50",d:"Brightens, prevents dark spots and gives a healthy glow."},
+      {n:"Bioderma Sébium Pore Refiner",p:"€14–18",d:"Instantly blurs pores and controls oil — great under makeup."},
+      {n:"Embryolisse Lait-Crème Concentré",p:"€12–18",d:"Rich night moisturiser that doubles as a makeup primer."},
+      {n:"Nuxe Rêve de Miel Lip Balm",p:"€10–13",d:"Intensive honey balm for dry lips, best overnight."}]},
+    {title:"👍 Nice additions (face)",items:[
+      {n:"La Roche-Posay Effaclar Duo(+)",p:"€12–16",d:"Targets and helps prevent occasional breakouts."},
+      {n:"Avène Cleanance Comedomed",p:"€18–24",d:"For occasional hormonal blemishes; smooths oily skin."},
+      {n:"Bioderma Sensibio Micellar Water",p:"€10–16",d:"Gentle cleanser and makeup remover (grab a small size — it's heavy)."}]},
+    {title:"☀️ Sunscreen options",items:[
+      {n:"LRP Anthelios UVMune 400 Oil Control Gel-Cream",p:"€18–22",d:"Mattifying SPF50+ for the oily T-zone."},
+      {n:"Avène Ultra Fluid SPF50+",p:"€14–18",d:"Light, fast-absorbing daily face sunscreen."},
+      {n:"Bioderma Photoderm Aquafluide SPF50+",p:"€16–20",d:"Watery-light SPF50+ with a fresh finish."}]},
+    {title:"👁 Under-eye care",items:[
+      {n:"Caudalie Resveratrol-Lift Eye Gel Cream",p:"€40–48",d:"De-puffs, smooths fine lines and brightens under-eyes."},
+      {n:"La Roche-Posay Hyalu B5 Eyes",p:"€30–36",d:"Hydrating eye serum that smooths fine lines."}]},
+    {title:"👁 Eye patches — ask (limited in FR pharmacies)",items:[
+      {n:"Talika Eye Therapy Patches",p:"€30–40",d:"Reusable silicone patches for puffiness."},
+      {n:"Patchology FlashPatch (if stocked)",p:"€12–20",d:"Single-use brightening patches — great before events."},
+      {n:"Filorga Optim-Eyes Patches (if available)",p:"€30–40",d:"Luxury option, occasionally stocked. No luck? A good eye cream is the better buy."}]},
+    {title:"🧴 Body",items:[
+      {n:"La Roche-Posay Lipikar Baume AP+M",p:"€12–18",d:"Rich body balm for dry skin."},
+      {n:"Bioderma Atoderm Shower Oil",p:"€10–16",d:"Gentle cleansing shower oil."},
+      {n:"Nuxe Huile Prodigieuse Dry Oil",p:"€18–28",d:"Iconic multi-use dry oil for body and hair."}]},
+    {title:"💇 Hair",items:[
+      {n:"Klorane Prickly Pear Shampoo (+ conditioner)",p:"€8–12 ea",d:"Softness and shine for dry or dull hair."},
+      {n:"Klorane Oat Dry Shampoo",p:"€8–11",d:"Freshens between washes."}]},
+    {title:"🦶 Feet",items:[
+      {n:"SVR Xérial 30 Foot Cream",p:"€10–14",d:"High-urea cream for calloused, dry feet."},
+      {n:"Akileïne Tired Legs & Feet Gel",p:"€10–15",d:"Cooling relief after long sightseeing days (optional)."}]}
+  ]},
+  {id:"swiss",label:"Switzerland",flag:"🇨🇭",accent:"#2F6B4F",note:"Zürich — buy chocolate on your last day for freshness",tiers:[
+    {title:"🍫 Chocolate",items:[
+      {n:"Läderach FrischSchoggi",p:"CHF 7–10/100g",d:"Fresh slab chocolate broken to order — the signature buy."},
+      {n:"Sprüngli truffles",p:"CHF 12–20/box",d:"The famous Zürich truffles; wonderful gifts."},
+      {n:"Sprüngli Luxemburgerli",p:"CHF 10–20",d:"Delicate mini-macarons — eat within a day or two, before flying."},
+      {n:"Ragusa bars",p:"CHF 2–4",d:"Hazelnut-praline chocolate bar; a supermarket classic."},
+      {n:"Frey chocolate (Migros)",p:"CHF 2–5",d:"Great-value Swiss chocolate, only at Migros."},
+      {n:"Kägi wafers",p:"CHF 3–5",d:"Crispy chocolate wafer fingers."}]},
+    {title:"🛒 Grocery — Migros / Coop",items:[
+      {n:"Ovomaltine Crunchy Cream",p:"CHF 5–8",d:"Crunchy malt-chocolate spread — a cult souvenir."},
+      {n:"Aromat seasoning",p:"CHF 3–5",d:"Swiss all-purpose savoury seasoning."},
+      {n:"Rivella",p:"CHF 2–3",d:"The classic Swiss soft drink (liquid — checked bag)."},
+      {n:"Zweifel chips",p:"CHF 3–5",d:"Swiss potato chips — paprika is the classic."},
+      {n:"Swiss herb tea",p:"CHF 4–8",d:"Alpine herbal tea blends."},
+      {n:"Rösti mix",p:"CHF 3–5",d:"Just-add-pan Swiss potato dish."},
+      {n:"Cheese fondue packet",p:"CHF 8–14",d:"Ready-blended fondue to make at home."},
+      {n:"Vacuum-packed cheese",p:"CHF varies",d:"Gruyère / Emmental sealed for travel."}]},
+    {title:"💄 Beauty",items:[
+      {n:"Weleda Skin Food",p:"CHF 10–18",d:"Rich cult moisturiser — cheaper in Switzerland."},
+      {n:"Curaprox toothbrush",p:"CHF 5–9",d:"Ultra-soft Swiss toothbrush."},
+      {n:"Swissdent toothpaste",p:"CHF 10–18",d:"Premium gentle whitening toothpaste."}]},
+    {title:"🔪 Practical",items:[
+      {n:"Victorinox Swiss Army knife",p:"CHF 20–60",d:"The classic — pack it in checked luggage."},
+      {n:"SIGG water bottle",p:"CHF 20–30",d:"Iconic Swiss aluminium bottle."}]}
+  ]}
+]};
+const TABS=[
+  {id:"today",label:"Today",svg:'<path d="M12 3l8 7h-2v9h-5v-6h-2v6H6v-9H4z"/>'},
+  {id:"days",label:"Days",svg:'<rect x="4" y="5" width="16" height="16" rx="2"/><path d="M4 9h16M8 3v4M16 3v4"/>'},
+  {id:"places",label:"Places",svg:'<path d="M12 21s7-6.5 7-11a7 7 0 1 0-14 0c0 4.5 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>'},
+  {id:"lists",label:"Lists",svg:'<path d="M8 6h11M8 12h11M8 18h11"/><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01"/>'},
+  {id:"info",label:"Info",svg:'<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.5v.01"/>'},
+];
+function renderTabs(){
+  const bar=$("#tabbar"); bar.innerHTML="";
+  TABS.forEach(t=>{
+    const b=document.createElement("button");
+    b.className="tab"+(state.tab===t.id?" active":"");
+    b.innerHTML='<svg viewBox="0 0 24 24" class="ti">'+t.svg+'</svg><span class="tl">'+t.label+'</span>';
+    b.onclick=()=>{ if(t.id==="days"){state.day=null;} go(t.id); };
+    bar.appendChild(b);
+  });
+}
+
+/* ====================== COMPONENTS ====================== */
+function calloutHTML(c){
+  return '<div class="callout"><div class="bar"></div><div><div class="ttl">'+esc(c.title)+'</div>'+
+    (c.body?'<div class="bd">'+esc(c.body)+'</div>':'')+'</div></div>';
+}
+function quickFacts(d){
+  let cells="";
+  if(d.walking) cells+='<div><div class="k">On foot</div><div class="v">'+esc(d.walking)+'</div></div>';
+  if(d.transport) cells+='<div><div class="k">Transport</div><div class="v">'+esc(d.transport)+'</div></div>';
+  return cells?'<div class="quick">'+cells+'</div>':"";
+}
+
+/* ====================== VIEW: TODAY ====================== */
+function viewToday(){
+  const t=tripDayNumber();
+  const n=t.n, d=DATA.days[n-1], leg=legOfDay(n);
+  setAccent(leg.color); setLegPill(leg);
+  let status, road=esc(d.subtitle);
+  if(t.state==="before"){ status='<span class="blink"></span> '+t.days+' day'+(t.days===1?'':'s')+' to departure'; }
+  else if(t.state==="after"){ status='<span class="blink"></span> Trip complete · safe travels home'; }
+  else { status='<span class="blink"></span> Day '+n+' of 12 · live'; }
+
+  let callouts = (d.callouts||[]).map(calloutHTML).join("");
+
+  // schedule
+  let tt = d.schedule.map(r=>'<div class="tt-row"><div class="tt-time">'+esc(r.time)+'</div><div class="tt-plan">'+esc(r.plan)+'</div></div>').join("");
+
+  let html='<section class="view">';
+  html+='<div class="board"><div class="inner">'+
+    '<div class="status">'+status+'</div>'+
+    '<div class="bigdate">'+esc(d.weekday)+', '+esc(d.date)+'</div>'+
+    '<h1>'+esc(d.headline)+'</h1>'+
+    (road?'<div class="road">'+road+'</div>':'')+
+    '<div class="legrow"><span class="tag"><span class="ic">'+leg.flag+'</span>'+esc(leg.name)+'</span>'+
+      (d.weather?'<span class="tag"><span class="ic">'+ICON.weather+'</span>'+esc(d.weather)+'</span>':'')+'</div>'+
+    quickFacts(d)+
+    '<div class="flipgo"><button class="btn primary" onclick="go(\'days\',{day:'+n+'})">Open full day →</button>'+
+      (t.state==="before"?'<button class="btn ghost" onclick="go(\'pack\')">Packing</button>':'')+'</div>'+
+    '</div></div>';
+
+  if(t.state==="before"){
+    html+='<div class="section-head"><div class="eyebrow">Before you fly</div><div class="h-section">Get set</div></div>';
+    html+='<div class="card pad note-soft">Your trip runs <b>July 10–21, 2026</b>: Brussels → Bruges &amp; Ghent → Luxembourg &amp; Vianden → Strasbourg &amp; Colmar → Zurich, Lucerne &amp; Mount Rigi. Tap <b>Days</b> to preview any day, <b>Pack</b> to tick off your bags, and <b>Info</b> for emergency numbers and money tips. Everything works offline once this page has loaded — add it to your home screen.</div>';
+    if(DATA.glance.key && DATA.glance.key.length){
+      html+='<div class="section-head"><div class="eyebrow">Locked in</div><div class="h-section">Confirmed</div></div><div class="card pad"><div class="gk">'+
+        DATA.glance.key.map(k=>'<div class="gk-v" style="margin-top:0">• '+esc(k.replace(/\.$/,''))+'</div>').join("")+'</div></div>';
+    }
+  } else {
+    if(callouts){ html+='<div class="section-head"><div class="eyebrow">Heads up</div><div class="h-section">Don’t miss</div></div>'+callouts; }
+    html+='<div class="section-head"><div class="eyebrow">Departure board</div><div class="h-section">Today’s plan</div></div>';
+    html+='<div class="card pad"><div class="timetable">'+(tt||'<div class="note-soft">A relaxed, unscheduled day.</div>')+'</div></div>';
+    html+='<div class="flipgo" style="margin-top:14px"><button class="btn primary block" onclick="go(\'days\',{day:'+n+'})">See walking tour, dining &amp; tips →</button></div>';
+  }
+  html+='</section>';
+  return html;
+}
+
+/* ====================== VIEW: DAYS (list + detail) ====================== */
+function viewDays(){
+  if(state.day){ return viewDayDetail(state.day); }
+  const todayN=tripDayNumber().n, tstate=tripDayNumber().state;
+  setAccent(LEGS.transit.color); setLegPill(LEGS.transit);
+  let html='<section class="view"><div class="section-head"><div class="eyebrow">11 nights · 4 countries</div><div class="h-section">The itinerary</div><div class="sub">July 10–21, 2026. Tap a day for its hour-by-hour plan, self-guided walk and dining.</div></div>';
+  DATA.days.forEach(d=>{
+    const leg=legOfDay(d.n);
+    const isToday=(tstate==="during"&&d.n===todayN);
+    html+='<a class="card daycard" href="#" onclick="go(\'days\',{day:'+d.n+'});return false" style="--accent:'+leg.color+'">'+
+      '<span class="stripe"></span><div class="dc-in">'+
+      '<div class="dc-top"><span class="dnum">DAY '+d.n+'</span><span class="ddate">'+esc(d.short)+'</span>'+
+        (isToday?'<span class="today-badge">Today</span>':'')+'<span style="margin-left:auto">'+leg.flag+'</span></div>'+
+      '<div class="dhead">'+esc(d.headline)+'</div>'+
+      (d.subtitle?'<div class="dsub">'+esc(d.subtitle)+'</div>':'')+
+      '</div><div class="chev">›</div></a>';
+  });
+  html+='</section>';
+  return html;
+}
+
+function viewDayDetail(n){
+  const d=DATA.days[n-1], leg=legOfDay(n);
+  setAccent(leg.color); setLegPill(leg);
+  const prev=n>1?n-1:null, next=n<12?n+1:null;
+  let html='<section class="view">';
+  html+='<div class="detail-bar"><button class="backbtn" onclick="go(\'days\',{day:null})">‹ All days</button>'+
+    '<div class="dstep"><button onclick="go(\'days\',{day:'+prev+'})" '+(prev?'':'disabled')+'>‹</button>'+
+    '<button onclick="go(\'days\',{day:'+next+'})" '+(next?'':'disabled')+'>›</button></div></div>';
+
+  // header card
+  html+='<div class="card pad" style="border-top:4px solid var(--accent)">'+
+    '<div class="dc-top" style="display:flex;align-items:center;gap:8px"><span class="dnum">DAY '+n+'</span>'+
+      '<span class="ddate">'+esc(d.weekday)+', '+esc(d.date)+'</span><span style="margin-left:auto;font-size:18px">'+leg.flag+'</span></div>'+
+    '<h1 style="font-family:var(--serif);font-size:24px;font-weight:600;margin:9px 0 0;line-height:1.15">'+esc(d.headline)+'</h1>'+
+    (d.subtitle?'<div class="sub" style="margin-top:6px">'+esc(d.subtitle)+'</div>':'')+
+    (d.overview?'<p style="font-size:14px;line-height:1.6;margin:12px 0 0;color:var(--ink)">'+esc(d.overview)+'</p>':'')+
+    '<div class="legrow" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap">'+
+      (d.weather?'<span class="chip flat">'+ICON.weather+' '+esc(d.weather)+'</span>':'')+
+      (d.walking?'<span class="chip flat">'+ICON.walk+' '+esc(d.walking)+'</span>':'')+
+      (d.transport?'<span class="chip flat">'+ICON.train+' '+esc(d.transport)+'</span>':'')+
+    '</div></div>';
+
+  // callouts
+  (d.callouts||[]).forEach(c=>{ html+=calloutHTML(c); });
+
+  // schedule
+  if(d.schedule.length){
+    html+='<div class="section-head"><div class="eyebrow">Departure board</div><div class="h-section">Hour by hour</div></div>';
+    html+='<div class="card pad"><div class="timetable">'+
+      d.schedule.map(r=>'<div class="tt-row"><div class="tt-time">'+esc(r.time)+'</div><div class="tt-plan">'+esc(r.plan)+'</div></div>').join("")+
+      '</div></div>';
+  }
+
+  // walking tour
+  if(d.tour && d.tour.stops.length){
+    html+='<div class="section-head"><div class="eyebrow">Self-guided · '+d.tour.stops.filter(s=>!s.transit).length+' stops</div><div class="h-section">Walking tour</div>'+
+      (d.tour.intro?'<div class="sub">'+esc(d.tour.intro)+'</div>':'')+'</div>';
+    html+='<div class="card">';
+    let stopNo=0;
+    d.tour.stops.forEach((s,i)=>{
+      if(s.transit){
+        html+='<div class="leg"><div class="leg-ic">🚆</div><div class="leg-body">'+
+          '<div class="leg-name">'+esc(s.name)+'</div>'+
+          (s.desc?'<div class="leg-desc">'+esc(s.desc)+'</div>':'')+
+          (s.url?'<div style="margin-top:8px"><a class="maplink" target="_blank" rel="noopener" href="'+esc(s.url)+'">📍 Open in Maps</a></div>':'')+
+        '</div></div>';
+        return;
+      }
+      stopNo++;
+      const seenKey="seen:"+n+":"+i, seen=store.get(seenKey,false);
+      html+='<div class="stop'+(seen?' seen':'')+'"><div class="num">'+stopNo+'</div><div class="body">'+
+        '<div class="name">'+esc(s.name)+'</div>'+
+        (s.desc?'<div class="desc">'+esc(s.desc)+'</div>':'')+
+        '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;align-items:center">'+
+          (s.url?'<a class="maplink" target="_blank" rel="noopener" href="'+esc(s.url)+'">📍 Open in Maps</a>':'')+
+          '<button class="seentog'+(seen?' on':'')+'" data-k="'+seenKey+'" onclick="toggleSeen(this)"><span class="sbox">✓</span>Seen</button>'+
+        '</div>'+
+        (s.address?'<div class="note-soft" style="margin-top:7px">'+esc(s.address)+'</div>':'')+
+      '</div></div>';
+    });
+    html+='</div>';
+  }
+
+  // eat
+  if(d.eat.length){
+    html+='<div class="section-head"><div class="eyebrow">Breakfast to nightcap</div><div class="h-section">Where to eat</div></div><div class="card pad">';
+    d.eat.forEach(e=>{ html+='<div class="eat-row"><div class="eat-cat">'+esc(e.cat)+'</div><div class="eat-rec">'+esc(e.rec)+'</div>'+
+      (e.notes?'<div class="eat-note">'+esc(e.notes)+'</div>':'')+'</div>'; });
+    html+='</div>';
+  }
+
+  // foods
+  if(d.foods.length){
+    html+='<div class="section-head"><div class="eyebrow">Order this</div><div class="h-section">Taste today</div></div><div class="card pad"><div class="foodlist">'+
+      d.foods.map(f=>'<div class="food"><div class="fn">'+esc(f.name)+'</div><div class="fd">'+esc(f.desc)+'</div></div>').join("")+'</div></div>';
+  }
+
+  // good to know
+  const g=d.good||{};
+  const gkmap=[["photo","📷 Photo spots"],["coffee","☕ Coffee"],["restrooms","🚻 Restrooms"],["rainy","☔ Rainy backup"],["packing","🧳 Day-bag reminder"]];
+  const gkrows=gkmap.filter(([k])=>g[k]).map(([k,lab])=>'<div><div class="gk-k">'+lab+'</div><div class="gk-v">'+esc(g[k])+'</div></div>');
+  if(gkrows.length){
+    html+='<div class="section-head"><div class="eyebrow">Good to know</div><div class="h-section">On the ground</div></div><div class="card pad"><div class="gk">'+gkrows.join("")+'</div></div>';
+  }
+
+  // notes
+  const key="note:day:"+n;
+  html+='<div class="section-head"><div class="eyebrow">Your day</div><div class="h-section">Notes</div></div>'+
+    '<textarea class="notes" placeholder="Reservations, table times, memories…" oninput="store.set(\''+key+'\',this.value)">'+esc(store.get(key,""))+'</textarea>';
+
+  // bottom nav
+  html+='<div class="flipgo" style="margin-top:18px">'+
+    (prev?'<button class="btn ghost" style="--accent:'+leg.color+';background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="go(\'days\',{day:'+prev+'})">‹ Day '+prev+'</button>':'')+
+    (next?'<button class="btn primary block" onclick="go(\'days\',{day:'+next+'})">Day '+next+' →</button>':'<button class="btn ghost block" style="background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="go(\'days\',{day:null})">Back to all days</button>')+
+  '</div>';
+
+  html+='</section>';
+  return html;
+}
+
+/* ====================== VIEW: PLACES ====================== */
+const CITY_LEG = {"Brussels":"be","Bruges":"be","Ghent":"be","Luxembourg City":"lu","Strasbourg":"fr","Lucerne":"ch","Zurich":"ch"};
+const FOODS_BY_LEG = {be:"Belgium 🇧🇪",lu:"Luxembourg 🇱🇺",fr:"Alsace (France) 🇫🇷",ch:"Switzerland 🇨🇭"};
+function viewPlaces(){
+  setAccent(LEGS.be.color); setLegPill({name:"All places",flag:"🗺️"});
+  let html='<section class="view"><div class="section-head"><div class="eyebrow">Tap anything to navigate</div><div class="h-section">Places &amp; maps</div><div class="sub">Hotels, stations, sights and tables — every name opens in Google Maps.</div></div>';
+
+  // Hotels
+  html+='<div class="minihead" style="margin:18px 4px 8px">Your four hotels</div>';
+  DATA.hotels.forEach(h=>{
+    html+='<div class="card pad" style="margin-bottom:10px"><div style="font-family:var(--serif);font-size:16px;font-weight:600;line-height:1.2">'+esc(h.name)+'</div>'+
+      (h.notes?'<div class="note-soft" style="margin-top:5px">'+esc(h.notes)+'</div>':'')+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:11px">'+
+        (h.mapUrl?'<a class="maplink" target="_blank" rel="noopener" href="'+esc(h.mapUrl)+'">📍 '+esc(h.address)+'</a>':'')+
+        (h.phone?'<a class="maplink" href="'+tel(h.phone)+'">☎ Call</a>':'')+
+      '</div></div>';
+  });
+
+  // Cities accordions
+  html+='<div class="minihead" style="margin:22px 4px 8px">By city</div>';
+  DATA.cities.forEach((c,i)=>{
+    const legkey=CITY_LEG[c.city]||"be", leg=LEGS[legkey];
+    html+='<details class="acc" style="--accent:'+leg.color+'"'+(i===0?'':'')+'>'+
+      '<summary><span class="city-flag">'+leg.flag+'</span><div><div class="city-name">'+esc(c.city)+'</div>'+
+        '<div class="city-meta">'+c.attractions.length+' sights · '+c.restaurants.length+' eats</div></div><span class="mk">›</span></summary>'+
+      '<div class="acc-body">';
+    // quick links
+    if(c.links.length){
+      html+='<div class="linkchips">'+c.links.map(l=> l.u
+          ?'<a class="chip" target="_blank" rel="noopener" href="'+esc(l.u)+'">'+(l.label==="Hotel"?"🏨":l.label==="Station"?"🚆":"📍")+' '+esc(l.label)+'</a>'
+          :'<span class="chip flat">🚗 '+esc(l.t||l.label)+'</span>'
+        ).join("")+'</div>';
+    }
+    if(c.attractions.length){
+      html+='<div class="minihead">★ Attractions</div>';
+      c.attractions.forEach(a=>{ html+='<a class="linkrow" target="_blank" rel="noopener" href="'+esc(a.u||'#')+'"><div><div class="lr-name">'+esc(a.t)+'</div>'+(a.note?'<div class="lr-note">'+esc(a.note)+'</div>':'')+'</div><span class="lr-go">Map ↗</span></a>'; });
+    }
+    if(c.restaurants.length){
+      html+='<div class="minihead">🍴 Eat &amp; drink</div>';
+      c.restaurants.forEach(a=>{ html+='<a class="linkrow" target="_blank" rel="noopener" href="'+esc(a.u||'#')+'"><div><div class="lr-name">'+esc(a.t)+'</div>'+(a.note?'<div class="lr-note">'+esc(a.note)+'</div>':'')+'</div><span class="lr-go">Map ↗</span></a>'; });
+    }
+    // local foods for the country
+    const fc=DATA.foods.find(f=>f.country===FOODS_BY_LEG[legkey]);
+    if(fc){
+      html+='<div class="minihead">🍽️ Local specialties</div><div class="foodlist">'+
+        fc.items.map(f=>'<div class="food"><div class="fn">'+esc(f.name)+'</div><div class="fd">'+esc(f.desc)+'</div></div>').join("")+'</div>';
+    }
+    html+='</div></details>';
+  });
+  html+='</section>';
+  return html;
+}
+
+/* ====================== VIEW: PACK ====================== */
+function packBody(){
+  let total=0,done=0;
+  DATA.packing.forEach((p,pi)=>p.items.forEach((_,ii)=>{ total++; if(store.get("pk:"+pi+":"+ii,false))done++; }));
+  let html='<div class="card pad" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:600;font-size:14px">Overall</span><span class="pricetag" id="pkOverall">'+done+' / '+total+'</span></div><div class="progress"><i id="pkBar" style="width:'+(total?Math.round(done/total*100):0)+'%"></i></div></div>';
+  DATA.packing.forEach((p,pi)=>{
+    let pdone=p.items.filter((_,ii)=>store.get("pk:"+pi+":"+ii,false)).length;
+    html+='<details class="acc" '+(pi===0?'open':'')+'><summary><div><div class="city-name" style="font-size:16px">'+esc(p.title)+'</div>'+
+      '<div class="city-meta" id="pkc'+pi+'">'+pdone+' of '+p.items.length+' packed</div></div><span class="mk">›</span></summary><div class="acc-body" style="padding-top:4px">';
+    p.items.forEach((it,ii)=>{
+      const on=store.get("pk:"+pi+":"+ii,false);
+      html+='<div class="check'+(on?' on':'')+'" data-pi="'+pi+'" data-ii="'+ii+'" onclick="togglePack(this)"><div class="box">✓</div><div class="lbl">'+esc(it)+'</div></div>';
+    });
+    html+='</div></details>';
+  });
+  html+='<button class="btn ghost block" style="margin-top:6px;background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="resetPack()">Reset all checklists</button>';
+  return html;
+}
+function recalcPack(){
+  let total=0,done=0;
+  DATA.packing.forEach((p,pi)=>{ let pd=0; p.items.forEach((_,ii)=>{ total++; const v=store.get("pk:"+pi+":"+ii,false); if(v){done++;pd++;} });
+    const c=$("#pkc"+pi); if(c)c.textContent=pd+" of "+p.items.length+" packed"; });
+  const b=$("#pkBar"), o=$("#pkOverall");
+  if(b)b.style.width=(total?Math.round(done/total*100):0)+"%";
+  if(o)o.textContent=done+" / "+total;
+}
+window.togglePack=function(el){
+  const pi=el.dataset.pi, ii=el.dataset.ii, key="pk:"+pi+":"+ii;
+  const v=!store.get(key,false); store.set(key,v); el.classList.toggle("on",v); recalcPack();
+};
+window.resetPack=function(){
+  if(!confirm("Uncheck every item on all five lists?"))return;
+  DATA.packing.forEach((p,pi)=>p.items.forEach((_,ii)=>store.set("pk:"+pi+":"+ii,false)));
+  render();
+};
+
+/* ====================== VIEW: SHOP ====================== */
+function shopBody(){
+  const lists=SHOPPING.lists;
+  const cur=lists.find(l=>l.id===state.shopList)||lists[0];
+  let total=0,done=0;
+  cur.tiers.forEach((t,ti)=>t.items.forEach((_,ii)=>{ total++; if(store.get("buy:"+cur.id+":"+ti+":"+ii,false))done++; }));
+  let html='<div class="seg">';
+  lists.forEach(l=>{ html+='<button class="'+(l.id===cur.id?"on":"")+'" onclick="switchShop(\''+l.id+'\')">'+esc(l.label)+'</button>'; });
+  html+='</div>';
+  html+='<div class="note-soft" style="margin:-2px 0 12px">'+esc(cur.note)+'. Tap an item for price &amp; details.</div>';
+  html+='<div class="card pad" style="margin-bottom:14px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-weight:600;font-size:14px">'+esc(cur.label)+'</span><span class="pricetag" id="buyOverall">'+done+' / '+total+'</span></div><div class="progress"><i id="buyBar" style="width:'+(total?Math.round(done/total*100):0)+'%"></i></div></div>';
+  cur.tiers.forEach((t,ti)=>{
+    html+='<div class="tier-head">'+esc(t.title)+'</div>';
+    t.items.forEach((it,ii)=>{
+      const key="buy:"+cur.id+":"+ti+":"+ii, on=store.get(key,false);
+      html+='<div class="check'+(on?" on":"")+'" onclick="toggleDetails(this)"><div class="box" data-k="'+key+'" onclick="toggleBuy(this,event)">✓</div><div class="lbl">'+esc(it.n)+'</div><span class="mk">›</span></div>';
+      let det=''; if(it.p)det+='<span class="pricetag">'+esc(it.p)+'</span> ';
+      if(it.d)det+=esc(it.d);
+      if(it.s)det+=' <b>Shade:</b> '+esc(it.s);
+      html+='<div class="buydetails">'+det+'</div>';
+    });
+  });
+  html+='<div style="display:flex;gap:8px;margin-top:14px"><button class="btn primary" id="copyBuyBtn" onclick="copyBuyList()">Copy list</button><button class="btn ghost" style="background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="resetBuy()">Reset this list</button></div>';
+  html+='<div class="note-soft" style="margin-top:10px">Prices are rough guides (€ in France · CHF in Switzerland) and vary by size and shop.</div>';
+  html+='<textarea id="buyBox" class="notes" readonly style="display:none;margin-top:10px;min-height:150px" onclick="this.select()"></textarea>';
+  return html;
+}
+function viewLists(){
+  const shop=SHOPPING.lists.find(l=>l.id===state.shopList)||SHOPPING.lists[0];
+  setAccent(state.listMode==="shop"?shop.accent:LEGS.transit.color);
+  setLegPill({name:"Lists",flag:"📝"});
+  let html='<section class="view"><div class="section-head"><div class="eyebrow">Tick off as you go</div><div class="h-section">Lists</div><div class="sub">Packing &amp; shopping, saved on this device.</div></div>';
+  html+='<div class="seg"><button class="'+(state.listMode==="pack"?"on":"")+'" onclick="switchListMode(\'pack\')">🧳 Packing</button><button class="'+(state.listMode==="shop"?"on":"")+'" onclick="switchListMode(\'shop\')">🛍️ Shopping</button></div>';
+  html+=(state.listMode==="shop")?shopBody():packBody();
+  html+='</section>';
+  return html;
+}
+window.switchListMode=function(m){ state.listMode=m; render(); window.scrollTo({top:0}); };
+window.toggleDetails=function(el){ el.classList.toggle("open"); };
+window.switchShop=function(id){ state.shopList=id; render(); window.scrollTo({top:0}); };
+window.toggleBuy=function(box,ev){ if(ev)ev.stopPropagation(); const k=box.dataset.k, v=!store.get(k,false); store.set(k,v); const row=box.closest(".check"); if(row)row.classList.toggle("on",v); recalcBuy(); };
+function recalcBuy(){
+  const cur=SHOPPING.lists.find(l=>l.id===state.shopList); if(!cur)return;
+  let total=0,done=0; cur.tiers.forEach((t,ti)=>t.items.forEach((_,ii)=>{ total++; if(store.get("buy:"+cur.id+":"+ti+":"+ii,false))done++; }));
+  const b=$("#buyBar"),o=$("#buyOverall"); if(b)b.style.width=(total?Math.round(done/total*100):0)+"%"; if(o)o.textContent=done+" / "+total;
+}
+window.resetBuy=function(){
+  const cur=SHOPPING.lists.find(l=>l.id===state.shopList); if(!cur)return;
+  if(!confirm("Uncheck every item on the "+cur.label+" list?"))return;
+  cur.tiers.forEach((t,ti)=>t.items.forEach((_,ii)=>store.set("buy:"+cur.id+":"+ti+":"+ii,false)));
+  render();
+};
+function buildBuyList(){
+  const cur=SHOPPING.lists.find(l=>l.id===state.shopList); if(!cur)return "";
+  let L=[cur.label+" — shopping list",""];
+  cur.tiers.forEach((t,ti)=>{ L.push(t.title); t.items.forEach((it,ii)=>{ const on=store.get("buy:"+cur.id+":"+ti+":"+ii,false); L.push("  ["+(on?"x":" ")+"] "+it); }); L.push(""); });
+  return L.join("\n");
+}
+window.copyBuyList=function(){
+  const txt=buildBuyList(), box=$("#buyBox");
+  const reveal=()=>{ if(box){ box.style.display="block"; box.value=txt; box.focus(); box.select(); } };
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>{ const b=$("#copyBuyBtn"); if(b){ const o=b.textContent; b.textContent="Copied ✓"; setTimeout(()=>b.textContent=o,1600); } }).catch(reveal);
+  } else reveal();
+};
+
+/* ---- Seen check-offs + export ---- */
+window.toggleSeen=function(el){
+  const k=el.dataset.k, v=!store.get(k,false);
+  store.set(k,v); el.classList.toggle("on",v);
+  const stop=el.closest(".stop"); if(stop)stop.classList.toggle("seen",v);
+};
+function buildTripLog(){
+  const M=DATA.meta; let L=[], seenCount=0;
+  L.push(M.title+" — "+M.subtitle);
+  L.push(M.dates);
+  L.push("Places seen (exported "+new Date().toLocaleDateString()+")");
+  L.push("");
+  DATA.days.forEach(d=>{
+    const stops=(d.tour&&d.tour.stops)||[];
+    const seen=stops.filter((s,i)=>store.get("seen:"+d.n+":"+i,false));
+    const note=(store.get("note:day:"+d.n,"")||"").trim();
+    if(seen.length||note){
+      L.push("DAY "+d.n+" · "+d.short+" — "+d.headline);
+      seen.forEach(s=>{ L.push("  \u2713 "+s.name); seenCount++; });
+      if(note) L.push("  \u270e Notes: "+note.replace(/\n/g,"\n     "));
+      L.push("");
+    }
+  });
+  if(!seenCount && !L.some(x=>x.startsWith("  \u270e"))) L.push("(Nothing checked off yet — tap \u201cSeen\u201d on places as you visit them.)");
+  else L.splice(3,0,"Total places checked off: "+seenCount,"");
+  return L.join("\n");
+}
+window.exportTrip=function(mode){
+  const txt=buildTripLog(), box=$("#exportBox");
+  const reveal=()=>{ if(box){ box.style.display="block"; box.value=txt; box.focus(); box.select(); } };
+  if(mode==="show"){ reveal(); return; }
+  if(mode==="copy"){
+    if(navigator.clipboard&&navigator.clipboard.writeText){
+      navigator.clipboard.writeText(txt).then(()=>flashBtn("Copied \u2713")).catch(reveal);
+    } else reveal();
+    return;
+  }
+  if(mode==="download"){
+    try{
+      const blob=new Blob([txt],{type:"text/plain;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a"); a.href=url; a.download="europe-2026-places-seen.txt";
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1500);
+    }catch(e){ reveal(); }
+  }
+};
+function flashBtn(msg){
+  const b=$("#copyLogBtn"); if(!b)return; const o=b.textContent; b.textContent=msg;
+  setTimeout(()=>{ b.textContent=o; },1800);
+}
+
+/* ====================== VIEW: INFO ====================== */
+function viewInfo(){
+  setAccent(LEGS.transit.color); setLegPill({name:"Essentials",flag:"ℹ️"});
+  const E=DATA.emergency;
+  let html='<section class="view"><div class="section-head"><div class="eyebrow">Keep this handy</div><div class="h-section">Essentials</div></div>';
+
+  // Emergency
+  html+='<div class="minihead" style="margin:8px 4px">🚨 Emergency · 112 works everywhere</div><div class="card">';
+  html+='<a class="emerg-call" href="tel:112"><div><div class="ec-c">All countries</div><div class="ec-n">General emergency line</div></div><span class="callbtn">Call 112</span></a>';
+  E.numbers.forEach(r=>{
+    html+='<div class="emerg-call"><div><div class="ec-c">'+esc(r.country)+'</div><div class="ec-n">Police '+esc(r.police)+' · Amb/Fire '+esc(r.amb)+'</div></div>'+
+      '<a class="callbtn" style="background:#7a5a14" href="'+tel(r.police)+'">Police</a></div>';
+  });
+  html+='</div>';
+
+  // Hospitals & embassy
+  html+='<div class="section-head"><div class="eyebrow">If something happens</div><div class="h-section">Hospitals &amp; US embassy</div></div><div class="card pad">';
+  E.hospitals.forEach(h=>{
+    const ph=(h.embassy.match(/\+[0-9 ]{6,}/)||[])[0];
+    html+='<div style="padding:11px 0;border-bottom:1px solid var(--line)"><div style="font-family:var(--serif);font-size:15px;font-weight:600">'+esc(h.city)+'</div>'+
+      '<div class="note-soft" style="margin-top:4px">🏥 '+esc(h.hospital)+'</div>'+
+      '<div class="note-soft" style="margin-top:3px">🇺🇸 '+esc(h.embassy.replace(/\+[0-9 ]{6,}/,'').replace(/,\s*$/,''))+(ph?' · <a class="tel" href="'+tel(ph)+'">'+esc(ph.trim())+'</a>':'')+'</div></div>';
+  });
+  html+='</div>';
+
+  // Money / power / VAT
+  html+='<div class="section-head"><div class="eyebrow">Practical</div><div class="h-section">Money, power &amp; customs</div></div><div class="card pad"><div class="gk">';
+  E.money.forEach(m=>{ html+='<div><div class="gk-k">'+esc(m.k)+'</div><div class="gk-v">'+esc(m.v)+'</div></div>'; });
+  html+='</div></div>';
+
+  // Drivers
+  html+='<div class="section-head"><div class="eyebrow">Booked door-to-door</div><div class="h-section">Private drivers</div></div>';
+  DATA.drivers.forEach(dr=>{
+    const det=dr.detail||{};
+    html+='<div class="card pad" style="margin-bottom:10px"><div style="font-family:var(--serif);font-size:16px;font-weight:600;line-height:1.2">'+esc(dr.title)+'</div>'+
+      (dr.when?'<div class="note-soft" style="margin-top:4px;color:var(--accent);font-weight:600">'+esc(dr.when)+'</div>':'');
+    const dk=[["Pickup","Pickup"],["Drop‑off","Drop-off"],["Drop-off","Drop-off"],["Route time","Route"],["Departure","Leave by"],["Payment","Pay"],["Meeting point","Meet"],["Start time","Start"]];
+    let kv='';const seen={};
+    dk.forEach(([k,lab])=>{ if(det[k]&&!seen[lab]){seen[lab]=1;kv+='<div class="k">'+lab+'</div><div>'+esc(det[k])+'</div>';} });
+    if(kv) html+='<div class="kv" style="margin-top:10px">'+kv+'</div>';
+    if(dr.stops&&dr.stops.length){
+      html+='<div class="minihead">En route</div>'+dr.stops.map(s=>'<a class="linkrow" target="_blank" rel="noopener" href="'+esc(s.url||'#')+'"><div><div class="lr-name">'+esc(s.name)+'</div><div class="lr-note">'+esc((s.desc||'').slice(0,90))+'</div></div><span class="lr-go">Map ↗</span></a>').join("");
+    }
+    html+='</div>';
+  });
+
+  // Transport
+  html+='<div class="section-head"><div class="eyebrow">Getting around</div><div class="h-section">Transport</div></div>';
+  DATA.transport.tables.forEach(sec=>{
+    if(!sec.tables.length && !sec.bullets.length) return;
+    html+='<div class="card pad" style="margin-bottom:10px"><div class="minihead" style="margin-top:0">'+esc(sec.name)+'</div>';
+    sec.tables.forEach(tb=>{
+      if(tb.length<1)return;
+      const head=tb[0], rows=tb.slice(1);
+      html+='<table class="dtable"><thead><tr>'+head.map(h=>'<th>'+esc(h)+'</th>').join("")+'</tr></thead><tbody>'+
+        rows.map(r=>'<tr>'+r.map(c=>'<td>'+esc(c)+'</td>').join("")+'</tr>').join("")+'</tbody></table>';
+    });
+    if(sec.bullets.length){ html+='<div class="gk" style="margin-top:10px">'+sec.bullets.map(b=>'<div class="gk-v" style="margin-top:0">• '+esc(b)+'</div>').join("")+'</div>'; }
+    html+='</div>';
+  });
+  DATA.transport.notes.forEach(n=>{ html+=calloutHTML(n); });
+
+  // Trip at a glance
+  html+='<div class="section-head"><div class="eyebrow">Reference</div><div class="h-section">Trip at a glance</div></div><div class="card pad">';
+  html+='<div class="minihead" style="margin-top:0">Route</div><table class="dtable"><thead><tr><th>Nights</th><th>City</th><th>Hotel</th></tr></thead><tbody>'+
+    DATA.glance.route.map(r=>'<tr><td>'+esc(r.nights)+'</td><td>'+esc(r.city)+' '+esc((r.country.match(/\p{Emoji}/u)||[''])[0])+'</td><td>'+esc(r.hotel)+'</td></tr>').join("")+'</tbody></table>';
+  if(DATA.glance.flights.length){
+    html+='<div class="minihead">Flights</div><div class="gk">'+DATA.glance.flights.map(f=>'<div><div class="gk-k">'+esc(f.k)+'</div><div class="gk-v">'+esc(f.v)+'</div></div>').join("")+'</div>';
+  }
+  html+='</div>';
+
+  // Shared photo album
+  html+='<div class="section-head"><div class="eyebrow">Group album</div><div class="h-section">Shared photos</div><div class="sub">One folder for the whole group — drop your photos here so everyone can see and download the trip’s pictures.</div></div>';
+  html+='<div class="card pad">'+
+    '<a class="btn primary" target="_blank" rel="noopener" href="https://example.com/replace-with-your-shared-album">📷 Open shared photo album</a>'+
+    '<div class="note-soft" style="margin-top:9px">Replace this link with your own shared cloud folder (OneDrive, Google Photos, iCloud). Everyone adds their own shots and browses the rest.</div>'+
+  '</div>';
+
+  // Trip log / export
+  html+='<div class="section-head"><div class="eyebrow">Your trip log</div><div class="h-section">Places we saw</div><div class="sub">Tap “Seen” on each place as you visit it (on every day’s walking tour). Saved on your own device — export your list here to share with the group.</div></div>';
+  html+='<div class="card pad">'+
+    '<div style="display:flex;gap:8px;flex-wrap:wrap">'+
+      '<button class="btn primary" id="copyLogBtn" onclick="exportTrip(\'copy\')">Copy trip log</button>'+
+      '<button class="btn ghost" style="background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="exportTrip(\'download\')">Download .txt</button>'+
+      '<button class="btn ghost" style="background:var(--paper-2);color:var(--accent);border:1px solid var(--line)" onclick="exportTrip(\'show\')">Preview</button>'+
+    '</div>'+
+    '<textarea id="exportBox" class="notes" readonly style="display:none;margin-top:10px;min-height:150px" onclick="this.select()"></textarea>'+
+  '</div>';
+
+  html+='<div class="card pad" style="margin-top:14px" id="storeNote"></div>';
+  html+='</section>';
+  return html;
+}
+
+/* ====================== RENDER ====================== */
+function render(){
+  renderTabs();
+  const app=$("#app");
+  let html="";
+  switch(state.tab){
+    case "today": html=viewToday(); break;
+    case "days":  html=viewDays();  break;
+    case "places":html=viewPlaces();break;
+    case "lists": html=viewLists(); break;
+    case "info":  html=viewInfo();  break;
+  }
+  app.innerHTML=html;
+  // storage warning note (only if storage unavailable, shown on info)
+  const sn=$("#storeNote");
+  if(sn){
+    if(store.ok){ sn.className="card pad note-soft"; sn.innerHTML='✓ Your “Seen” places, notes and packing checkmarks save automatically on this device (each traveler keeps their own). To keep them, open this guide from the same browser. <b>Add to Home Screen</b> for an app-like, offline copy.'; }
+    else { sn.className="card pad note-soft"; sn.style.borderColor="#d8b24a"; sn.innerHTML='⚠︎ Saving is disabled in this preview, so checkmarks and notes won’t persist. They’ll work normally once this file is opened from a hosted link (e.g. GitHub Pages) or saved to your device.'; }
+  }
+}
+
+/* boot: open on Today, jump straight into the live day if mid-trip */
+(function(){
+  render();
+})();
+</script>
+</body>
+</html>
