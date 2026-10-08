@@ -1,9 +1,9 @@
 # Japan 2026
 
-Trip-companion app for the Japan 2026 trip: a single self-contained `index.html`
-"field guide" — per-day itineraries, tappable Google Maps walking tours, packing
-and shopping checklists, and a shareable trip log. No build step, no dependencies;
-hosts free on GitHub Pages and works offline once loaded.
+Trip-companion app for the Japan 2026 trip (Oct 14–27): a single self-contained
+`index.html` "field guide" — per-day itineraries, tappable Google Maps walking
+tours, a packing checklist, and a shareable trip log. No build step, no
+dependencies; hosts free on GitHub Pages and works offline once loaded.
 
 ## Building the app
 
@@ -17,8 +17,25 @@ the data model in `references/architecture.md`, the design system in
 
 ## Status
 
-Skill installed; trip data not yet entered. Next step: provide the itinerary
-(cities/dates/hotels) so the app can be built.
+`index.html` is built from the authoritative master itinerary (8 overnight
+stays, 4 booked Shinkansen reservations, 2 luggage-forwarding shipments, 2
+booked dinners, the Hiroshima museum ticket). A few things are intentionally
+left as the source itinerary flagged them:
+
+- No hotel phone numbers or booking confirmation numbers (not provided).
+- No private address for the Yokkaichi friends/family stay.
+- The Sushi Fujioka and Gion Fukushi addresses were found via web search, not
+  from the actual reservation confirmations — verify against your own booking
+  before relying on them.
+- `weather` is left blank per day — a forecast checked now would be stale by
+  travel time; re-check closer to departure instead.
+- Remaining operational to-dos (QR tickets, luggage shipment execution, the
+  Shikanoyu taxi booking, etc.) are listed in the source itinerary's
+  "Remaining actions" section and aren't tracked as checkboxes in the app.
+
+To update the trip (add a stop, fix a time, reorder a walking tour), open a
+Claude Code session here and describe the change — the **travel-field-guide-app**
+skill at `.claude/skills/travel-field-guide-app/` picks it up automatically.
 
 ## Deploying
 
